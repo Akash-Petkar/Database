@@ -1,3 +1,17 @@
+Specs
+ 'specName' = 'DEVICE_ID'
+   'specName' = 'LOCATION_ID'
+   'specName' = 'DEVICE_TYPE'
+   'specName' = 'CPE_CHARACTERISTIC'
+   'specName' = 'CUSTOMER_SIGNALING_SUBNET'
+   'specName' = 'CUSTOMER_SIGNALING_VLAN'
+   'specName' = 'CUSTOMER_MEDIA_VLAN'
+   'specName' = 'IP_VERSION'
+   'specName' = 'DNS_PRIORITY'
+   'specName' = 'SIGNALING_FQDN'
+   'specName' = 'CUSTOMER_SIGNALING_BASE_IP'
+   'specName' = 'SBC_INDEX'
+=================================
 Null check
 WITH parsed_data AS (
     SELECT
