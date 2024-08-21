@@ -1,3 +1,71 @@
+New Query
+WITH entity_references AS (
+    SELECT 
+        jsonb_array_elements(entity_reference->'entityReferance') AS entity_ref
+    FROM 
+        svcinv.t_service_inventory
+    WHERE
+        (entity_reference->'entityReferance' @> '[{"entityType": "ENTERPRISE"}]'::jsonb)
+        OR
+        (entity_reference->'entityReferance' @> '[{"entityType": "LOCATION"}]'::jsonb)
+),
+entity_child_data_extracted AS (
+    SELECT
+        t.entity_ref->>'entityId' AS entity_id,
+        t.entity_ref->>'entityName' AS entity_name,
+        jsonb_array_elements(entity_child_data->'entityChildReferenceData') AS child_ref_data
+    FROM 
+        svcinv.t_service_inventory t
+        JOIN entity_references e ON e.entity_ref->>'entityId' = t.entity_ref->>'entityId'
+),
+attributes_extracted AS (
+    SELECT
+        entity_id,
+        entity_name,
+        jsonb_array_elements(child_ref_data->'childEntityData') AS child_data
+    FROM 
+        entity_child_data_extracted
+),
+final_result AS (
+    SELECT
+        entity_id,
+        entity_name,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'DEVICE_ID'->>'specValue') AS device_id,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'LOCATION_ID'->>'specValue') AS location_id,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'DEVICE_TYPE'->>'specValue') AS device_type,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'CPE_CHARACTERISTIC'->>'specValue') AS cpe_characteristic,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'CUSTOMER_SIGNALING_SUBNET'->>'specValue') AS customer_signaling_subnet,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'CUSTOMER_SIGNALING_VLAN'->>'specValue') AS customer_signaling_vlan,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'CUSTOMER_MEDIA_VLAN'->>'specValue') AS customer_media_vlan,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'IP_VERSION'->>'specValue') AS ip_version,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'DNS_PRIORITY'->>'specValue') AS dns_priority,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'SIGNALING_FQDN'->>'specValue') AS signaling_fqdn,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'CUSTOMER_SIGNALING_BASE_IP'->>'specValue') AS customer_signaling_base_ip,
+        MAX((child_data->'childEntityAttributes'->'attributes')::jsonb->'SBC_INDEX'->>'specValue') AS sbc_index
+    FROM
+        attributes_extracted
+    GROUP BY
+        entity_id, entity_name
+)
+SELECT
+    entity_id,
+    entity_name,
+    COALESCE(device_id, 'NULL') AS device_id,
+    COALESCE(location_id, 'NULL') AS location_id,
+    COALESCE(device_type, 'NULL') AS device_type,
+    COALESCE(cpe_characteristic, 'NULL') AS cpe_characteristic,
+    COALESCE(customer_signaling_subnet, 'NULL') AS customer_signaling_subnet,
+    COALESCE(customer_signaling_vlan, 'NULL') AS customer_signaling_vlan,
+    COALESCE(customer_media_vlan, 'NULL') AS customer_media_vlan,
+    COALESCE(ip_version, 'NULL') AS ip_version,
+    COALESCE(dns_priority, 'NULL') AS dns_priority,
+    COALESCE(signaling_fqdn, 'NULL') AS signaling_fqdn,
+    COALESCE(customer_signaling_base_ip, 'NULL') AS customer_signaling_base_ip,
+    COALESCE(sbc_index, 'NULL') AS sbc_index
+FROM
+    final_result;
+
+===========================================
 Specs
  'specName' = 'DEVICE_ID'
    'specName' = 'LOCATION_ID'
