@@ -1,0 +1,697 @@
+select
+		distinct child_attributes.enterpriseid,
+		childEntityData1 ->> 'specValue' as DeviceID,
+		childEntityData2 ->> 'specValue' as LocationID,
+		childEntityData3 ->> 'specValue' as RealDeviceType,
+		childEntityData4 ->> 'specValue' as CPECharacteristic,
+		childEntityData5 ->> 'specValue' as CustomerSignalingSubnet,
+		childEntityData6 ->> 'specValue' as CustomerSignalingVLAN,
+		childEntityData7 ->> 'specValue' as CustomerMediaVLAN,
+		childEntityData8 ->> 'specValue' as IP_Version,
+		childEntityData9 ->> 'specValue' as DnsPriority,
+		childEntityData10 ->> 'specValue' as CarrierSignalingFqdn,
+		childEntityData101 ->> 'specValue' as CustomerSignalingBaseIP,
+		childEntityData102 ->> 'specValue' as SbcIndex
+	    from
+		 (
+		  select
+			enterpriseid,
+			jsonb_array_elements(cast(group_child_data.childEntityData as jsonb))->>'childEntityAttributes' as childEntityAttributes,
+			jsonb_array_elements(cast(group_child_data.childEntityData11 as jsonb))->>'childEntityAttributes' as childEntityAttributes21,
+			jsonb_array_elements(cast(group_child_data.childEntityData12 as jsonb))->>'childEntityAttributes' as childEntityAttributes22,
+			jsonb_array_elements(cast(group_child_data.childEntityData13 as jsonb))->>'childEntityAttributes' as childEntityAttributes23,
+			jsonb_array_elements(cast(group_child_data.childEntityData14 as jsonb))->>'childEntityAttributes' as childEntityAttributes24
+		  from
+			(
+			select
+				entity_reference_array ->> 'entityId' as enterpriseid,
+				entityChildReferenceData->>'childEntityData' as childEntityData,
+				entityChildReferenceData1->>'childEntityData' as childEntityData11,
+				entityChildReferenceData2->>'childEntityData' as childEntityData12,
+				entityChildReferenceData3->>'childEntityData' as childEntityData13,
+				entityChildReferenceData4->>'childEntityData' as childEntityData14,
+				entityAttributes->>'specName' specName,
+				entityAttributes->>'specValue' specValue
+			from
+				svcinv.t_service_inventory,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData1,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData2,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData3,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData4,
+				jsonb_array_elements(entity_reference -> 'entityReferance') entity_reference_array,
+				jsonb_array_elements(entity_reference -> 'entityReferance') entity_reference_array1,
+				jsonb_array_elements(entity_attributes->'entityAttributes') entityAttributes,
+				jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') entityChildReferenceData5,
+				jsonb_array_elements(entityChildReferenceData5 -> 'childEntityData') childEntityData31,
+				jsonb(childEntityData31 -> 'childEntityAttributes') childEntityAttributes32,
+				jsonb_array_elements(childEntityAttributes32 ->'attributes') childEntityData33
+			where
+				entity_type = 'SBC'
+				and entityChildReferenceData ->>'childEntityType' = 'DEVICE'
+				and entityChildReferenceData1 ->>'childEntityType' = 'NODE_INFRA_PROVISIONING'
+				and entityChildReferenceData2 ->>'childEntityType' = 'SIGNALING_INTERFACE'
+				and entityChildReferenceData3 ->>'childEntityType' = 'SBC_INFRA_PROVISIONING'
+				and entityChildReferenceData4 ->>'childEntityType' = 'GATEWAY_SBC'
+				and childEntityData33->>'specName'='DEVICE_ID' 
+				and childEntityData33->>'specValue'= '44'
+				and entity_reference_array1 ->> 'entityType'='LOCATION'
+				and entity_reference_array1 ->> 'entityId'= '52057'
+				and entity_reference_array ->> 'entityType'='ENTERPRISE'
+				and entity_reference_array ->> 'entityId'= '400304906'
+	        ) group_child_data
+          ) child_attributes,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes as jsonb) ->'attributes') childEntityData1,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes as jsonb) ->'attributes') childEntityData2,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes as jsonb) ->'attributes') childEntityData3,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes as jsonb) ->'attributes') childEntityData4,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes21 as jsonb) ->'attributes') childEntityData5,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes21 as jsonb) ->'attributes') childEntityData6,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes21 as jsonb) ->'attributes') childEntityData7,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes21 as jsonb) ->'attributes') childEntityData8,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes22 as jsonb) ->'attributes') childEntityData9,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes22 as jsonb) ->'attributes') childEntityData10,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes23 as jsonb) ->'attributes') childEntityData101,
+		 jsonb_array_elements(cast(child_attributes.childEntityAttributes24 as jsonb) ->'attributes') childEntityData102
+	    where
+		childEntityData1 ->> 'specName' = 'DEVICE_ID'
+		and childEntityData2 ->> 'specName' = 'LOCATION_ID'
+		and childEntityData3 ->> 'specName' = 'DEVICE_TYPE'
+		and childEntityData4 ->> 'specName' = 'CPE_CHARACTERISTIC'
+		and childEntityData5 ->> 'specName' = 'CUSTOMER_SIGNALING_SUBNET'
+		and childEntityData6 ->> 'specName' = 'CUSTOMER_SIGNALING_VLAN'
+		and childEntityData7 ->> 'specName' = 'CUSTOMER_MEDIA_VLAN'
+		and childEntityData8 ->> 'specName' = 'IP_VERSION'
+		and childEntityData9 ->> 'specName' = 'DNS_PRIORITY'
+	    and childEntityData10 ->> 'specName' = 'SIGNALING_FQDN'
+	    and childEntityData101 ->> 'specName' = 'CUSTOMER_SIGNALING_BASE_IP'
+	    and childEntityData102 ->> 'specName' = 'SBC_INDEX';
+
+==================================================================================
+entity_reference column
+{
+  "entityReferance": [
+    {
+      "entityId": "52057",
+      "entityName": "LOC_821_US",
+      "entityType": "LOCATION"
+    },
+    {
+      "entityId": "400304906",
+      "entityName": "ENT_821_US",
+      "entityType": "ENTERPRISE"
+    }
+  ]
+}
+========================================================================
+entity_child_data column
+{
+  "entityChildReferenceData": [
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "NODE_SBC_INFRA_PROVISIONING_ID",
+                "specValue": "TPAMI1_TPA1"
+              },
+              {
+                "specName": "VPN_NAME",
+                "specValue": "PUB-Internet__"
+              },
+              {
+                "specName": "IP_VERSION",
+                "specValue": "IPv4"
+              },
+              {
+                "specName": "ACCESS_TYPE",
+                "specValue": "IDS"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "NODE_SBC_INFRA_PROVISIONING_ID",
+                "specValue": "TPAMI1_TPA1"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "NODE_SBC_INFRA_PROVISIONING"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "NAME",
+                "specValue": "LOC_821_US"
+              },
+              {
+                "specName": "PE_IP_ADDRESS",
+                "specValue": "172.1.2.17"
+              },
+              {
+                "specName": "CE_IP_ADDRESS",
+                "specValue": "172.1.2.19"
+              },
+              {
+                "specName": "PVC_DLCI",
+                "specValue": "11111111"
+              },
+              {
+                "specName": "PVC_CIRCUIT",
+                "specValue": ""
+              },
+              {
+                "specName": "ROUTER_CLLI",
+                "specValue": "TPAMI1SBC1"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": []
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "SBC_ROUTER"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "DEVICE_MAP_ID",
+                "specValue": "1332199"
+              },
+              {
+                "specName": "DEVICE_NAME",
+                "specValue": "Nokia1334"
+              },
+              {
+                "specName": "INTERNAL_ADMIN",
+                "specValue": "-1"
+              },
+              {
+                "specName": "END_POINT_TYPE",
+                "specValue": ""
+              },
+              {
+                "specName": "DEVICE_CHAR_ID",
+                "specValue": "2"
+              },
+              {
+                "specName": "DEVICE_ID",
+                "specValue": "44"
+              },
+              {
+                "specName": "ADDRESS",
+                "specValue": "28.21.92.41"
+              },
+              {
+                "specName": "FQDN",
+                "specValue": "Nokia1334627.globalipcom.com"
+              },
+              {
+                "specName": "TERM_CALLING_IND",
+                "specValue": ""
+              },
+              {
+                "specName": "TRANSPORT",
+                "specValue": "UDP"
+              },
+              {
+                "specName": "PARENT_DOMAIN",
+                "specValue": "globalipcom.com"
+              },
+              {
+                "specName": "SIP_DOMAIN",
+                "specValue": "627.globalipcom.com"
+              },
+              {
+                "specName": "SIG_TIER_OVERRIDE_FLAG",
+                "specValue": ""
+              },
+              {
+                "specName": "DEVICE_REAL_TYPE",
+                "specValue": "Cisco 5400-Trunk Shared"
+              },
+              {
+                "specName": "SBC_PROV_METHOD",
+                "specValue": "ESAP"
+              },
+              {
+                "specName": "LNP_TRANSITION_FLAG",
+                "specValue": ""
+              },
+              {
+                "specName": "PROXY_CLUSTER",
+                "specValue": ""
+              },
+              {
+                "specName": "NS_URI",
+                "specValue": ""
+              },
+              {
+                "specName": "PQ_INSTANCE_ID",
+                "specValue": ""
+              },
+              {
+                "specName": "CODEC",
+                "specValue": "Codec"
+              },
+              {
+                "specName": "DEVICE_TYPE",
+                "specValue": "CPE_ENTPRISE_GTWY_SHARED"
+              },
+              {
+                "specName": "BS_DEVICE_TYPE",
+                "specValue": "Cisco 5400-Trunk (sp)"
+              },
+              {
+                "specName": "NET_ADDRESS",
+                "specValue": "1332199"
+              },
+              {
+                "specName": "ORDER_PRO_TIN",
+                "specValue": "727658107334"
+              },
+              {
+                "specName": "ORDER_VERSION",
+                "specValue": "0"
+              },
+              {
+                "specName": "ENTITY_ID",
+                "specValue": "1332199"
+              },
+              {
+                "specName": "ENTITY_NAME",
+                "specValue": "Nokia1334"
+              },
+              {
+                "specName": "COUNTRY_CODE",
+                "specValue": "US"
+              },
+              {
+                "specName": "STN",
+                "specValue": "12146709077"
+              },
+              {
+                "specName": "STN",
+                "specValue": "12146709077"
+              },
+              {
+                "specName": "HUNT_STRATEGY",
+                "specValue": "HUNT"
+              },
+              {
+                "specName": "PORT",
+                "specValue": ""
+              },
+              {
+                "specName": "SEC_IP_ADDRESS",
+                "specValue": "57.15.99.37"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "DEVICE_ID",
+                "specValue": "44"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "DEVICE"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "INTERFACE_STATE_ENABLED",
+                "specValue": "Y"
+              },
+              {
+                "specName": "DNS_ACCESS_TYPE",
+                "specValue": "sn"
+              },
+              {
+                "specName": "DNS_DEVICE_SEQ_NUM",
+                "specValue": "n87465"
+              },
+              {
+                "specName": "INTERFACE_STATE_ENABLED",
+                "specValue": "Y"
+              },
+              {
+                "specName": "SIGNALING_INTERFACE_IP",
+                "specValue": "166.34.120.12"
+              },
+              {
+                "specName": "SIGNALING_FQDN",
+                "specValue": "snn87465.vika856.globalipcom.com"
+              },
+              {
+                "specName": "SIGNALING_INTERFACE_PORT",
+                "specValue": "6504"
+              },
+              {
+                "specName": "DNS_PRIORITY",
+                "specValue": "100"
+              },
+              {
+                "specName": "INTERFACE_NETWORK_TYPE",
+                "specValue": "CARRIER"
+              },
+              {
+                "specName": "TRANSPORT_PROTOCOL",
+                "specValue": "UDP"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "SIGNALING_FQDN",
+                "specValue": "snn87465.vika856.globalipcom.com"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        },
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "INTERFACE_STATE_ENABLED",
+                "specValue": "Y"
+              },
+              {
+                "specName": "DNS_ACCESS_TYPE",
+                "specValue": "sc"
+              },
+              {
+                "specName": "DNS_DEVICE_SEQ_NUM",
+                "specValue": "n87465"
+              },
+              {
+                "specName": "INTERFACE_STATE_ENABLED",
+                "specValue": "Y"
+              },
+              {
+                "specName": "SIGNALING_INTERFACE_IP",
+                "specValue": "172.30.200.12"
+              },
+              {
+                "specName": "SIGNALING_FQDN",
+                "specValue": "scn87465.vika856.globalipcom.com"
+              },
+              {
+                "specName": "SIGNALING_INTERFACE_PORT",
+                "specValue": "6504"
+              },
+              {
+                "specName": "DNS_PRIORITY",
+                "specValue": "100"
+              },
+              {
+                "specName": "INTERFACE_NETWORK_TYPE",
+                "specValue": "CUSTOMER"
+              },
+              {
+                "specName": "TRANSPORT_PROTOCOL",
+                "specValue": "UDP"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "SIGNALING_FQDN",
+                "specValue": "scn87465.vika856.globalipcom.com"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "SIGNALING_INTERFACE"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "BW_POLICING_ENABLED",
+                "specValue": "N"
+              },
+              {
+                "specName": "CARRIER_MEDIA_VLAN",
+                "specValue": "114"
+              },
+              {
+                "specName": "CARRIER_SIGNALING_VLAN",
+                "specValue": "113"
+              },
+              {
+                "specName": "CUSTOMER_MEDIA_SUBNET",
+                "specValue": ""
+              },
+              {
+                "specName": "CUSTOMER_MEDIA_VLAN",
+                "specValue": "112"
+              },
+              {
+                "specName": "PROV_SBC_INFRA",
+                "specValue": "N"
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_BASE_IP",
+                "specValue": "172.30.200.0"
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_SUBNET",
+                "specValue": ""
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_VLAN",
+                "specValue": "111"
+              },
+              {
+                "specName": "DNS_IP1",
+                "specValue": "63.79.81.2"
+              },
+              {
+                "specName": "DNS_IP2",
+                "specValue": "63.79.81.2"
+              },
+              {
+                "specName": "IP_VERSION",
+                "specValue": "IPv4"
+              },
+              {
+                "specName": "SIG_POLICING_ENABLED",
+                "specValue": "N"
+              },
+              {
+                "specName": "NODE_NAME",
+                "specValue": "TPAMI1"
+              },
+              {
+                "specName": "SBC_CLLI",
+                "specValue": "TPAMI1SBC1"
+              },
+              {
+                "specName": "NODE_SBC_INFRA_PROVISIONING_ID",
+                "specValue": ""
+              },
+              {
+                "specName": "SBC_SECONDARY_CCL",
+                "specValue": "0"
+              },
+              {
+                "specName": "SBC_PRIMARY_CCL",
+                "specValue": "10"
+              },
+              {
+                "specName": "SBC_SHORT_NAME",
+                "specValue": "TPA1"
+              },
+              {
+                "specName": "CUSTOMER_SBC_SIGNALING_INTERFACE",
+                "specValue": "ge0-0"
+              },
+              {
+                "specName": "CARR_SIG_INTERFACE",
+                "specValue": "ge1-0"
+              },
+              {
+                "specName": "CUSTOMER_SBC_SIGNALING_INTERFACE",
+                "specValue": "ge0-0"
+              },
+              {
+                "specName": "CARR_SIG_INTERFACE",
+                "specValue": "ge1-0"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "SBC_SHORT_NAME",
+                "specValue": "TPA1"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "SBC_INFRA_PROVISIONING"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "SBC_INDEX",
+                "specValue": ""
+              },
+              {
+                "specName": "SBC_CLLI",
+                "specValue": "TPAMI1SBC1"
+              },
+              {
+                "specName": "SBC_SHORT_NAME",
+                "specValue": "TPA1"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "SBC_INDEX",
+                "specValue": ""
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "GATEWAY_SBC"
+    },
+    {
+      "childEntityData": [
+        {
+          "childEntityAttributes": {
+            "attributes": [
+              {
+                "specName": "CUSTOMER_MEDIA_GATEWAY_IP",
+                "specValue": "172.30.200.129"
+              },
+              {
+                "specName": "NWK_NODE_ID",
+                "specValue": "7"
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_SUBNET",
+                "specValue": "172.30.200.1"
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_VLAN",
+                "specValue": "111"
+              },
+              {
+                "specName": "CUSTOMER_SIGNALING_GATEWAY_IP",
+                "specValue": "172.30.200.1"
+              },
+              {
+                "specName": "IP_VERSION",
+                "specValue": "IPv4"
+              },
+              {
+                "specName": "NODE_ACCESS_CATEGORY",
+                "specValue": ""
+              },
+              {
+                "specName": "VRRP_GROUP",
+                "specValue": "0"
+              },
+              {
+                "specName": "ACTIVATE_ROUTER",
+                "specValue": "N"
+              },
+              {
+                "specName": "CUSTOMER_MEDIA_VLAN",
+                "specValue": "112"
+              },
+              {
+                "specName": "CUSTOMER_MEDIA_SUBNET",
+                "specValue": "172.30.200.128"
+              },
+              {
+                "specName": "SECONDARY_ROUTER_CLLI",
+                "specValue": "TPAMI1R2"
+              },
+              {
+                "specName": "PRIMARY_ROUTER_CLLI",
+                "specValue": "TPAMI1R1"
+              },
+              {
+                "specName": "ACCESS_TYPE",
+                "specValue": "IDS"
+              },
+              {
+                "specName": "NODE_NAME",
+                "specValue": "TPAMI1"
+              },
+              {
+                "specName": "VPN_NAME",
+                "specValue": "PUB-Internet__"
+              }
+            ]
+          },
+          "keyIdentifierAttributes": {
+            "attributes": [
+              {
+                "specName": "NODE_NAME",
+                "specValue": "TPAMI1"
+              }
+            ]
+          },
+          "parentKeyIdentifierAttributes": {
+            "attributes": []
+          }
+        }
+      ],
+      "childEntityType": "NODE_INFRA_PROVISIONING"
+    }
+  ]
+}
