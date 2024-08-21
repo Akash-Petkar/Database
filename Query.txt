@@ -1,3 +1,75 @@
+Null check
+WITH parsed_data AS (
+    SELECT
+        entity_reference_array ->> 'entityId' AS enterpriseid,
+        jsonb_array_elements(entity_child_data -> 'entityChildReferenceData') AS childRef,
+        entityAttributes->>'specName' AS specName,
+        entityAttributes->>'specValue' AS specValue
+    FROM
+        svcinv.t_service_inventory,
+        jsonb_array_elements(entity_reference -> 'entityReferance') entity_reference_array,
+        jsonb_array_elements(entity_attributes->'entityAttributes') entityAttributes
+    WHERE
+        entity_type = 'SBC'
+        AND (
+            (entity_reference_array ->> 'entityType' = 'ENTERPRISE' AND entity_reference_array ->> 'entityId' = '400304906')
+            OR
+            (entity_reference_array ->> 'entityType' = 'LOCATION' AND entity_reference_array ->> 'entityId' = '52057')
+        )
+),
+filtered_data AS (
+    SELECT
+        enterpriseid,
+        childRef ->> 'childEntityType' AS childEntityType,
+        jsonb_array_elements(cast(childRef -> 'childEntityData' AS jsonb) -> 'childEntityAttributes') AS childEntityAttributes
+    FROM
+        parsed_data
+    WHERE
+        childRef ->> 'childEntityType' IN ('DEVICE', 'NODE_INFRA_PROVISIONING', 'SIGNALING_INTERFACE', 'SBC_INFRA_PROVISIONING', 'GATEWAY_SBC')
+),
+device_filtered AS (
+    SELECT
+        fd.enterpriseid,
+        ca ->> 'specName' AS specName,
+        ca ->> 'specValue' AS specValue,
+        fd.childEntityAttributes
+    FROM
+        filtered_data fd,
+        LATERAL jsonb_array_elements(fd.childEntityAttributes -> 'attributes') ca
+    WHERE
+        ca ->> 'specName' = 'DEVICE_ID'
+        AND ca ->> 'specValue' = '44'
+)
+SELECT DISTINCT
+    df.enterpriseid,
+    COALESCE(ca1 ->> 'specValue', 'NULL') AS DeviceID,
+    COALESCE(ca2 ->> 'specValue', 'NULL') AS LocationID,
+    COALESCE(ca3 ->> 'specValue', 'NULL') AS RealDeviceType,
+    COALESCE(ca4 ->> 'specValue', 'NULL') AS CPECharacteristic,
+    COALESCE(ca5 ->> 'specValue', 'NULL') AS CustomerSignalingSubnet,
+    COALESCE(ca6 ->> 'specValue', 'NULL') AS CustomerSignalingVLAN,
+    COALESCE(ca7 ->> 'specValue', 'NULL') AS CustomerMediaVLAN,
+    COALESCE(ca8 ->> 'specValue', 'NULL') AS IP_Version,
+    COALESCE(ca9 ->> 'specValue', 'NULL') AS DnsPriority,
+    COALESCE(ca10 ->> 'specValue', 'NULL') AS CarrierSignalingFqdn,
+    COALESCE(ca101 ->> 'specValue', 'NULL') AS CustomerSignalingBaseIP,
+    COALESCE(ca102 ->> 'specValue', 'NULL') AS SbcIndex
+FROM
+    device_filtered df
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca1 ON ca1 ->> 'specName' = 'DEVICE_ID'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca2 ON ca2 ->> 'specName' = 'LOCATION_ID'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca3 ON ca3 ->> 'specName' = 'DEVICE_TYPE'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca4 ON ca4 ->> 'specName' = 'CPE_CHARACTERISTIC'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca5 ON ca5 ->> 'specName' = 'CUSTOMER_SIGNALING_SUBNET'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca6 ON ca6 ->> 'specName' = 'CUSTOMER_SIGNALING_VLAN'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca7 ON ca7 ->> 'specName' = 'CUSTOMER_MEDIA_VLAN'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca8 ON ca8 ->> 'specName' = 'IP_VERSION'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca9 ON ca9 ->> 'specName' = 'DNS_PRIORITY'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca10 ON ca10 ->> 'specName' = 'SIGNALING_FQDN'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca101 ON ca101 ->> 'specName' = 'CUSTOMER_SIGNALING_BASE_IP'
+    LEFT JOIN LATERAL jsonb_array_elements(df.childEntityAttributes -> 'attributes') ca102 ON ca102 ->> 'specName' = 'SBC_INDEX';
+
+=========================================================
 select
 		distinct child_attributes.enterpriseid,
 		childEntityData1 ->> 'specValue' as DeviceID,
