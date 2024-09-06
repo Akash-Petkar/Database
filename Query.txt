@@ -1,5 +1,157 @@
 TN-IventoryReport
 ===============================================================
+Junit Test Case
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.http.ResponseEntity;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Collections;
+import java.util.List;
+
+@SpringBootTest
+public class OrderServiceTest {
+
+    @Mock
+    private CssopApiConfig cssopApiConfig;
+
+    @Mock
+    private CamelServiceImpl camelServiceImpl;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    private TnInventoryReportRequest request;
+    private ObjectMapper objectMapper;
+    private JsonNode rootNode;
+    private String columnValue;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        request = new TnInventoryReportRequest();
+        request.setLocationId(Collections.singletonList("locationIdValue"));
+        request.setTransactionId("transactionIdValue");
+        request.setSource("sourceValue");
+        request.setEnterpriseId("enterpriseIdValue");
+        request.setRequestId("requestIdValue");
+
+        objectMapper = new ObjectMapper();
+
+        // Sample JSON structure to mock the rootNode
+        String json = "{ \"serviceOrder\": { \"serviceOrderHeader\": { \"flow\": \"flowValue\", " +
+                      "\"supp\": true, \"suppField\": false, \"region\": \"regionValue\", " +
+                      "\"product\": \"productValue\", \"orderType\": \"orderTypeValue\", " +
+                      "\"serviceType\": \"serviceTypeValue\", \"functionCode\": \"functionCodeValue\", " +
+                      "\"lineOfBusiness\": \"lineOfBusinessValue\", \"workOrderVersion\": \"1.0\", " +
+                      "\"userContact\": { \"firstName\": \"John\", \"lastName\": \"Doe\" } }, " +
+                      "\"services\": { \"commonSpecifications\": { \"specification\": [ { \"code\": \"EnterpriseId\", \"value\": \"enterpriseIdValue\" }, " +
+                      "{ \"code\": \"API_NAME\", \"value\": \"APINameValue\" }, " +
+                      "{ \"code\": \"locationId\", \"value\": \"locationIdValue\" }, " +
+                      "{ \"code\": \"REQUEST_ID\", \"value\": \"requestIdValue\" } ] }, " +
+                      "\"convergedService\": { \"serviceCapability\": [ { \"entityType\": \"entityTypeValue\", " +
+                      "\"actionCode\": \"actionCodeValue\" } ] } } } } }";
+
+        columnValue = json;
+        rootNode = objectMapper.readTree(columnValue);
+    }
+
+    @Test
+    public void testGenerateOrderSuccess() throws Exception {
+        // Mocking
+        when(cssopApiConfig.getTnInventoryReportTemplate("getTnInventoryReport"))
+                .thenReturn(Collections.singletonList(Collections.singletonList(new GenericTableData(columnValue))));
+        when(camelServiceImpl.executeCamelService(any(CamelServiceRequest.class)))
+                .thenReturn(ResponseEntity.ok("Success"));
+
+        // Execute the method to be tested
+        ResponseEntity<Object> response = orderService.generateOrder(request);
+
+        // Assertions
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("Success", response.getBody());
+    }
+
+    @Test
+    public void testGenerateOrderException() {
+        // Mocking an exception
+        when(cssopApiConfig.getTnInventoryReportTemplate("getTnInventoryReport"))
+                .thenThrow(new RuntimeException("Mocked Exception"));
+
+        // Execute the method to be tested
+        ResponseEntity<Object> response = orderService.generateOrder(request);
+
+        // Assertions
+        assertNull(response); // Expecting the response to be null due to exception handling in the method
+    }
+
+    @Test
+    public void testMapUserContact() {
+        // Execute the method to be tested
+        UserContact userContact = orderService.mapUserContact(rootNode, request);
+
+        // Assertions
+        assertNotNull(userContact);
+        assertEquals("John", userContact.getFirstName());
+        assertEquals("Doe", userContact.getLastName());
+        assertEquals("sourceValue", userContact.getId());
+    }
+
+    @Test
+    public void testMapServiceOrderHeader() {
+        // Execute the method to be tested
+        UserContact userContact = orderService.mapUserContact(rootNode, request);
+        ServiceOrderHeader serviceOrderHeader = orderService.mapServiceOrderHeader(rootNode, request, userContact);
+
+        // Assertions
+        assertNotNull(serviceOrderHeader);
+        assertEquals("flowValue", serviceOrderHeader.getFlow());
+        assertTrue(serviceOrderHeader.isSupp());
+        assertFalse(serviceOrderHeader.isSuppField());
+        assertEquals("regionValue", serviceOrderHeader.getRegion());
+        assertEquals("productValue", serviceOrderHeader.getProduct());
+        assertEquals("orderTypeValue", serviceOrderHeader.getOrderType());
+        assertEquals("serviceTypeValue", serviceOrderHeader.getServiceType());
+        assertEquals("functionCodeValue", serviceOrderHeader.getFunctionCode());
+        assertEquals("lineOfBusinessValue", serviceOrderHeader.getLineOfBusiness());
+        assertEquals("transactionIdValue", serviceOrderHeader.getWorkOrderNumber());
+        assertEquals("1.0", serviceOrderHeader.getWorkOrderVersion());
+        assertEquals("sourceValue", serviceOrderHeader.getOriginatingSystem());
+        assertEquals(userContact, serviceOrderHeader.getUserContact());
+    }
+
+    @Test
+    public void testMapSpecs() {
+        // Execute the method to be tested
+        List<Spec> specs = orderService.mapSpecs(rootNode, request, "locationIdValue");
+
+        // Assertions
+        assertNotNull(specs);
+        assertEquals(4, specs.size());
+
+        // Verifying each spec's code and value
+        assertEquals("EnterpriseId", specs.get(0).getCode());
+        assertEquals("enterpriseIdValue", specs.get(0).getValue());
+
+        assertEquals("API_NAME", specs.get(1).getCode());
+        assertEquals("APINameValue", specs.get(1).getValue());
+
+        assertEquals("locationId", specs.get(2).getCode());
+        assertEquals("locationIdValue", specs.get(2).getValue());
+
+        assertEquals("REQUEST_ID", specs.get(3).getCode());
+        assertEquals("requestIdValue", specs.get(3).getValue());
+    }
+}
+
+===============================================================
 @Override
 	public ResponseEntity<Object> generateOrder(TnInventoryReportRequest request) throws ApplicationInterfaceException{
 		ResponseEntity<Object> camelResponse = null;
