@@ -1,5 +1,117 @@
 TN-IventoryReport
 ===============================================================
+@Override
+	public ResponseEntity<Object> generateOrder(TnInventoryReportRequest request) throws ApplicationInterfaceException{
+		ResponseEntity<Object> camelResponse = null;
+		String locationIds = String.join(",", request.getLocationId());
+		
+		List<List<GenericTableData>> tnInventoryReportTemplate = cssopApiConfig.getTnInventoryReportTemplate("getTnInventoryReport");
+		 List<GenericTableData> dataList = tnInventoryReportTemplate.get(0);
+		 GenericTableData genericTableData = dataList.get(0);
+		 String columnValue = genericTableData.getColumnValue();
+		 
+		 ObjectMapper objectMapper = new ObjectMapper();
+		 
+		 JsonNode rootNode;
+		try {
+			rootNode = objectMapper.readTree(columnValue);
+			
+		    UserContact userContact = mapUserContact(rootNode, request);
+		    ServiceOrderHeader serviceOrderHeader = mapServiceOrderHeader(rootNode, request, userContact);
+		    List<Spec> specs = mapSpecs(rootNode, request, locationIds);
+		    
+		    CommonSpecifications commonSpecifications = new CommonSpecifications();
+		    commonSpecifications.setSpecification(specs);
+		    
+		    ServiceCapability serviceCapability = new ServiceCapability();
+		    serviceCapability.setEntityType(rootNode.path("serviceOrder").path("services").path("convergedService")
+		            .path("serviceCapability").get(0).path("entityType").asText());
+		    serviceCapability.setActionCode(rootNode.path("serviceOrder").path("services").path("convergedService")
+		            .path("serviceCapability").get(0).path("actionCode").asText());
+		    
+		    ConvergedService convergedService = new ConvergedService();
+		    convergedService.setServiceCapability(Collections.singletonList(serviceCapability));
+
+		    Services services = new Services();
+		    services.setCommonSpecifications(commonSpecifications);
+		    services.setConvergedService(convergedService);
+		    
+		    ServiceOrder serviceOrder = new ServiceOrder();
+		    serviceOrder.setServiceOrderHeader(serviceOrderHeader);
+		    serviceOrder.setServices(services);
+		    
+		    CamelServiceRequest camelServiceRequest = new CamelServiceRequest();
+		    camelServiceRequest.setServiceOrder(serviceOrder);
+		    camelResponse = camelServiceImpl.executeCamelService(camelServiceRequest);
+		} catch (Exception e) {
+			log.error(e.getMessage());
+		}		
+		return camelResponse;
+		}
+
+		public UserContact mapUserContact(JsonNode rootNode, TnInventoryReportRequest request) {
+		    JsonNode userContactNode = rootNode.path("serviceOrder").path("serviceOrderHeader").path("userContact");
+
+		    UserContact userContact = new UserContact();
+		    userContact.setId(request.getSource());
+		    userContact.setFirstName(userContactNode.path("firstName").asText());
+		    userContact.setLastName(userContactNode.path("lastName").asText());
+
+		    return userContact;
+		}
+
+		public ServiceOrderHeader mapServiceOrderHeader(JsonNode rootNode, TnInventoryReportRequest request, UserContact userContact) {
+		    JsonNode headerNode = rootNode.path("serviceOrder").path("serviceOrderHeader");
+
+		    ServiceOrderHeader serviceOrderHeader = new ServiceOrderHeader();
+		    serviceOrderHeader.setFlow(headerNode.path("flow").asText());
+		    serviceOrderHeader.setSupp(headerNode.path("supp").asBoolean());
+		    serviceOrderHeader.setSuppField(headerNode.path("suppField").asBoolean());
+		    serviceOrderHeader.setRegion(headerNode.path("region").asText());
+		    serviceOrderHeader.setProduct(headerNode.path("product").asText());
+		    serviceOrderHeader.setOrderType(headerNode.path("orderType").asText());
+		    serviceOrderHeader.setServiceType(headerNode.path("serviceType").asText());
+		    serviceOrderHeader.setFunctionCode(headerNode.path("functionCode").asText());
+		    serviceOrderHeader.setLineOfBusiness(headerNode.path("lineOfBusiness").asText());
+		    serviceOrderHeader.setWorkOrderNumber(request.getTransactionId());
+		    serviceOrderHeader.setWorkOrderVersion(headerNode.path("workOrderVersion").asText());
+		    serviceOrderHeader.setOriginatingSystem(request.getSource());
+		    serviceOrderHeader.setUserContact(userContact);
+
+		    return serviceOrderHeader;
+		}
+
+		public List<Spec> mapSpecs(JsonNode rootNode, TnInventoryReportRequest request, String locationIds) {
+		    List<Spec> specs = new ArrayList<>();
+		    JsonNode specsNode = rootNode.path("serviceOrder").path("services").path("commonSpecifications").path("specification");
+
+		    specsNode.forEach(spec -> {
+		        Spec specObj = new Spec();
+		        String code = spec.path("code").asText();
+		        specObj.setCode(code);
+
+		        switch (code) {
+		            case "EnterpriseId":
+		                specObj.setValue(request.getEnterpriseId());
+		                break;
+		            case "API_NAME":
+		                specObj.setValue(spec.path("value").asText());
+		                break;
+		            case "locationId":
+		                specObj.setValue(locationIds);
+		                break;
+		            case "REQUEST_ID":
+		                specObj.setValue(request.getRequestId());
+		                break;
+		            default:
+		                specObj.setValue(spec.path("value").asText());
+		                break;
+		        }
+		        specs.add(specObj);
+		    });		    
+		    return specs;
+	}
+===============================================================
 Updated Code:
 @Override
 public ResponseEntity<Object> generateOrder(TnInventoryReportRequest request) throws ApplicationInterfaceException {
