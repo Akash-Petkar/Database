@@ -1,4 +1,71 @@
 TN-IventoryReport
+===============================================================
+UserContact userContact = new UserContact();
+    	userContact.setId("CSSOP");
+    	userContact.setFirstName("CSSOP");
+    	userContact.setLastName("CSSOP");
+    	
+    	ServiceOrderHeader serviceOrderHeader = new ServiceOrderHeader();
+    	serviceOrderHeader.setFlow("VRD-TSO");
+    	serviceOrderHeader.setSupp(false);
+    	serviceOrderHeader.setSuppField(false);
+    	serviceOrderHeader.setRegion("US");
+    	serviceOrderHeader.setProduct("VOIP");
+    	serviceOrderHeader.setOrderType("CHANGE");
+    	serviceOrderHeader.setServiceType("IP Trunking");
+    	serviceOrderHeader.setFunctionCode("RELEASE");
+    	serviceOrderHeader.setLineOfBusiness("RETAIL_VOIP");
+    	serviceOrderHeader.setWorkOrderNumber(body.getTransactionId());
+    	serviceOrderHeader.setWorkOrderVersion("0");
+    	serviceOrderHeader.setOriginatingSystem(body.getSource());
+    	serviceOrderHeader.setUserContact(userContact);
+    	
+    	Spec spec1 = new Spec();
+    	spec1.setCode("EnterpriseId");
+    	spec1.setValue(body.getEnterpriseId());
+    	
+    	Spec spec2 = new Spec();
+    	spec2.setCode("API_NAME");
+    	spec2.setValue("getTnInventoryReport");
+    	
+    	Spec spec3 = new Spec();
+    	spec3.setCode("locationId");
+    	spec3.setValue(locationIds);
+    	
+    	Spec spec4 = new Spec();
+    	spec4.setCode("REQUEST_ID");
+    	spec4.setValue(body.getRequestId());
+    	
+    	List<Spec> specs = new ArrayList<>();
+    	specs.add(spec1);
+    	specs.add(spec2);
+    	specs.add(spec3);
+    	specs.add(spec4);
+    	
+    	CommonSpecifications commonSpecifications = new CommonSpecifications();   	
+    	commonSpecifications.setSpecification(specs);   	
+    	
+    	ServiceCapability serviceCapability = new ServiceCapability();
+    	serviceCapability.setEntityType("TNINVREPORT");
+    	serviceCapability.setActionCode("CHANGE");   	
+    	
+    	List<ServiceCapability> serviceCapabilities = new ArrayList<>();
+    	serviceCapabilities.add(serviceCapability);
+    	
+    	ConvergedService convergedService = new ConvergedService();
+    	convergedService.setServiceCapability(serviceCapabilities);
+    	
+    	Services services = new Services();
+    	services.setCommonSpecifications(commonSpecifications);
+    	services.setConvergedService(convergedService);
+    	
+    	ServiceOrder serviceOrder = new ServiceOrder();
+    	serviceOrder.setServiceOrderHeader(serviceOrderHeader);
+    	serviceOrder.setServices(services);
+    	
+    	CamelServiceRequest camelServiceRequest = new CamelServiceRequest();
+    	camelServiceRequest.setServiceOrder(serviceOrder);
+===============================================================
 String columnValue = genericTableData.getColumnValue();
 ------------------------------------------------------------
 {
