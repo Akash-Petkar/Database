@@ -1,3 +1,86 @@
+TN-IventoryReport
+String columnValue = genericTableData.getColumnValue();
+------------------------------------------------------------
+{
+	"serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-TSO",
+			"supp": false,
+			"suppField": false,
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Trunking",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "",
+			"workOrderVersion": "0",
+			"originatingSystem": "",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+		"services": {
+			"commonSpecifications": {
+				"specification": [
+					{
+						"code": "EnterpriseId",
+						"value": ""
+					},
+					{
+						"code": "API_NAME",
+						"value": "getTnInventoryReport"
+					},
+					{
+						"code": "locationId",
+						"value": ""
+					},
+					{
+						"code": "REQUEST_ID",
+						"value": ""
+					}
+				]
+			},
+			"convergedService": {
+				"serviceCapability": [
+					{
+						"entityType": "TNINVREPORT",
+						"actionCode": "CHANGE"
+					}
+				]
+			}
+		}
+	}
+}
+
+@Override
+	public ResponseEntity<Object> generateOrder(TnInventoryReportRequest request) throws ApplicationInterfaceException {
+		//ResponseEntity<Object> camelResponse = camelServiceImpl.executeCamelService(request);
+		
+		String locationIds = String.join(",", request.getLocationId());
+		
+		 List<List<GenericTableData>> tnInventoryReportTemplate = tnInventoryReportConfig.getTnInventoryReportTemplate("getTnInventoryReport");
+		 List<GenericTableData> dataList = tnInventoryReportTemplate.get(0);
+		 GenericTableData genericTableData = dataList.get(0);
+		 String columnValue = genericTableData.getColumnValue();
+		 
+		
+		return null;
+	}
+
+
+
+{
+  "transactionId":"C_MJZ1d1655195592559",
+  "requestId" : “e444f944-cfb5-4e75-abc8-a2712cbbe2f4”,
+  "enterpriseId" : "ENT819164169",
+  "locationId" : ["Loc819180638", “Loc819180639”],
+  "source": “CSSOP”
+}
+
+=============================================================================
 New Query
 WITH entity_references AS (
     SELECT 
