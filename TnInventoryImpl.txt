@@ -1,0 +1,275 @@
+package com.verizon.connect.svcinv.business.dataservice.services;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVWriter;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseInClauseParams;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseRequestDTO;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseResponseDTO;
+
+@Service
+@Primary
+public class TnInventoryReportServiceImpl implements TnInventoryReportService{
+
+	private static final Logger log = LoggerFactory.getLogger(TnInventoryReportServiceImpl.class);
+
+	@Value("${spring.svcInvReadGenericUrl}")
+	String svcInvReadUrl;
+
+	@Value("${spring.configReadGenericDbUrl}")
+	String configReadUrl;
+
+	@Autowired
+	private RestTemplate restTemplate;
+	
+	
+	@Override
+    public ExternalInterfaceResponse getTnInvReport(TnInventoryReportRequest request) {
+        ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+        List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+        ExternalInterfaceResponse response = loadApiData();
+        JSONObject jsonVal = new JSONObject(response);
+        JSONArray rawDataArray = jsonVal.getJSONArray("rawBusinessResponse");
+        String pathforFileStorage = rawDataArray.getString(0);
+
+        boolean hasEnterpriseID = isNonEmpty(request.getEnterpriseId());
+        boolean hasLocationId = isNonEmpty(request.getLocationId()) && !request.getLocationId().contains("");
+
+        if (hasEnterpriseID && hasLocationId || hasLocationId) {
+            generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_LOCATION_FOR_CSSOP", request.getLocationId());
+        } else if (hasEnterpriseID) {
+            generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_FOR_CSSOP", Arrays.asList(request.getEnterpriseId()));
+        } else {
+            throw new IllegalArgumentException("Invalid request: EnterpriseID or LocationId must be provided");
+        }
+
+        HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList, new HttpHeaders());
+        ResponseEntity<List<GenericDataBaseResponseDTO>> genericDataBaseResponseDTORef = restTemplate.exchange(
+                svcInvReadUrl, HttpMethod.POST, requestEntity,
+                new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+                });
+
+        List<GenericDataBaseResponseDTO> responseBody = genericDataBaseResponseDTORef.getBody();
+        if (responseBody != null && !responseBody.get(0).getDataList().isEmpty()) {
+            externalInterfaceResponse.setRawBusinessResponse(responseBody);
+        }
+        
+
+        processDatabaseResponse(responseBody, pathforFileStorage, request, response);       
+
+        log.info("Exited SvcinvBusinessServiceImpl.getTnInvReport(ExternalInterfaceRequest request)");
+        externalInterfaceResponse.setStatusCode("0");
+        externalInterfaceResponse.setStatusDescription("Success");
+        return externalInterfaceResponse;
+    }
+	
+
+	public boolean isNonEmpty(String value) {
+        return value != null && !value.isEmpty();
+    }
+    
+	public boolean isNonEmpty(List<String> value) {
+        return value != null && !value.isEmpty();
+    }
+
+    public void generateDatabaseRequest(List<GenericDataBaseRequestDTO> requestList, TnInventoryReportRequest request,
+                                         String apiName, List<String> values) {
+        GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+        genericDataBaseRequestDTO.setSqlKey(apiName);
+        genericDataBaseRequestDTO.setSourceService(request.getSource());
+
+        String[] columnValues = values.toArray(new String[0]);
+
+        if (apiName.equals("GET_TN_DETAILS_FOR_CSSOP")) {
+            genericDataBaseRequestDTO.setColumnValues(columnValues);
+        } else {
+            GenericDataBaseInClauseParams clauseParams = new GenericDataBaseInClauseParams();
+            clauseParams.setInParams(columnValues);
+            clauseParams.setKey("location_id");
+            genericDataBaseRequestDTO.setInClauseList(Arrays.asList(clauseParams));
+            genericDataBaseRequestDTO.setColumnValues(new String[1]);
+        }
+
+        requestList.add(genericDataBaseRequestDTO);
+    }
+
+    public void processDatabaseResponse(List<GenericDataBaseResponseDTO> responseBody, String resourceDirectory,
+                                         TnInventoryReportRequest request, ExternalInterfaceResponse response) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String data = objectMapper.writeValueAsString(responseBody.get(0).getDataList());
+            JsonNode jsonNode = objectMapper.readTree(data);
+            processJson(jsonNode, resourceDirectory, request, response);
+        } catch (IOException e) {
+            log.error("Exception occurred due to", e);
+        }
+    }
+
+    public static void processJson(JsonNode jsonNode, String resourceDirectory, TnInventoryReportRequest request,
+                                   ExternalInterfaceResponse response) {
+    	Map<String, CSVWriter> csvWriters = new HashMap<>();
+    	try {
+    		JSONObject jsonVal = new JSONObject(response);
+    		 JSONArray rawDataArray = jsonVal.getJSONArray("rawBusinessResponse");
+    		 JSONArray headerVal = rawDataArray.getJSONArray(1);
+    		 String headerColumnValues = headerVal.getString(0);
+    		 String[] headerValue = headerColumnValues.substring(1, headerColumnValues.length() - 1).split(",");
+    		 
+    		 for(JsonNode arrayElement:jsonNode) {
+    			 String locationId = getLocationId(arrayElement);
+    			 if(!csvWriters.containsKey(locationId)) {
+    				 CSVWriter csvWriter = createCsvWriter(resourceDirectory, locationId, headerValue);
+    				 csvWriters.put(locationId, csvWriter);
+    			 }
+    			 processArrayElement(arrayElement, csvWriters.get(locationId));
+    		 }
+    		 
+    		 for(CSVWriter writer : csvWriters.values()) {
+    			 writer.close();
+    		 }
+		} catch (IOException e) {
+			log.error("Exception ocurred due to", e);
+		}
+    }
+    
+    public static String getLocationId(JsonNode arrayElement) {
+    	for(JsonNode element : arrayElement) {
+    		if("location_id".equals(element.get("columnName").asText())){
+    			return element.get("columnValue").asText();
+    		}
+    	}
+    	return null;
+    }
+
+    public static CSVWriter createCsvWriter(String resourceDirectory, String locationId, String[] headerValue) throws IOException {
+        Path outputPath = getOutputPath(resourceDirectory, locationId);
+        CSVWriter csvWriter = new CSVWriter(new FileWriter(outputPath.toFile(), true));
+        boolean isNewFile = isFileEmpty(outputPath);
+        if (isNewFile) {
+            csvWriter.writeNext(headerValue);
+        }
+        return csvWriter;
+    }
+
+    public static Path getOutputPath(String resourceDirectory, String locationId) {
+       // String custId = request.getEnterpriseId();
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+        String timestamp = now.format(formatter);
+        String fileName = locationId + "_" + timestamp + ".csv";
+        return Paths.get(resourceDirectory, fileName);
+    }
+
+    public static boolean isFileEmpty(Path path) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+            return reader.readLine() == null;
+        }
+    }
+
+    public static void processArrayElement(JsonNode arrayElement, CSVWriter csvWriter) {
+        String[] row = new String[9];
+        for (JsonNode element : arrayElement) {
+            String columnName = element.get("columnName").asText();
+            String columnValue = element.get("columnValue").asText();
+            switch (columnName) {
+                case "entity_name":
+                    row[0] = columnValue;
+                    break;
+                case "location_id":
+                    row[1] = columnValue;
+                    break;
+                case "location_type":
+                    row[2] = columnValue;
+                    break;
+                case "tn":
+                    row[3] = columnValue;
+                    break;
+                case "tn_status":
+                    row[4] = columnValue;
+                    break;
+                case "calling_line_id_first_name":
+                    row[5] = columnValue;
+                    break;
+                case "calling_line_id_last_name":
+                    row[6] = columnValue;
+                    break;
+                case "type":
+                    row[7] = columnValue;
+                    break;
+                case "resourcetype":
+                    row[8] = columnValue;
+                    break;
+                default:
+                    log.warn("Unexpected Column Name: " + columnName);
+                    break;
+            }
+        }
+        csvWriter.writeNext(row);
+    }
+
+    public ExternalInterfaceResponse loadApiData() {
+        log.info("<<<<<<------ Entered ExternalInterfaceResponse loadApiData() ------>>>>>>");
+
+        ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+        GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+        List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+        genericDataBaseRequestDTO.setSqlKey("GET_CSSOP_API_CONFIG");
+        genericDataBaseRequestDTO.setSourceService("CSSOP");
+
+        genericDataBaseRequestDTO.setColumnValues(new Object[]{"GET_TN_DETAILS_FOR_CSSOP"});
+        requestList.add(genericDataBaseRequestDTO);
+
+        HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList, new HttpHeaders());
+        ResponseEntity<List<GenericDataBaseResponseDTO>> genericDbResponse = restTemplate.exchange(configReadUrl,
+                HttpMethod.POST, requestEntity, new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+                });
+
+        if (genericDbResponse.getBody() != null && !genericDbResponse.getBody().get(0).getDataList().isEmpty()) {
+            String value1 = genericDbResponse.getBody().get(0).getDataList().get(0).get(0).getColumnValue();
+            JSONObject jsonVal = new JSONObject(value1);
+
+            String resourceDirectory = jsonVal.getString("resourceDirectory");
+            String[] headers = {jsonVal.getString("header")};
+            externalInterfaceResponse.setRawBusinessResponse(Arrays.asList(resourceDirectory, headers));
+        }
+
+        log.info("<<<<<<------ Exited ExternalInterfaceResponse loadApiData() ------>>>>>>"
+                + externalInterfaceResponse.getRawBusinessResponse());
+        return externalInterfaceResponse;
+    }
+	
+	
+}
