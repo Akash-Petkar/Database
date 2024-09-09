@@ -1,3 +1,27 @@
+=============================================
+Controller
+
+@RestController
+public class TnInventoryReportApiRestController implements TnInventoryReportApi{
+
+	private static final Logger log = LoggerFactory.getLogger(TnInventoryReportApiRestController.class);
+	
+	@Autowired
+	private TnInventoryReportService  tnInventoryReportService;
+	
+	@Override
+	public ResponseEntity<ExternalInterfaceResponse> getTnInvReport(@ApiParam(value = "getTnInvReportApi", required = true) @Valid @RequestBody TnInventoryReportRequest externalInterfaceRequest)
+			throws AppException, JsonProcessingException{
+		
+		log.info("Entered SvcinvWriteDatabaseApiRestController.getTnInvReport()");
+
+		ExternalInterfaceResponse externalInterfaceResponse = tnInventoryReportService.getTnInvReport(externalInterfaceRequest);
+		
+		return new ResponseEntity<>(externalInterfaceResponse,HttpStatus.OK);
+		
+	}
+}
+
 ============================================================================================
 Junit Code coverage
 package com.verizon.connect.svcinv.business.dataservice.services;
