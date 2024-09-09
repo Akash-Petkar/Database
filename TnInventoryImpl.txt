@@ -1,3 +1,89 @@
+=============================================
+import static org.mockito.Mockito.*;
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
+import java.util.*;
+
+public class JsonProcessorTest {
+
+    @Mock
+    private JsonNode jsonNode;
+
+    @Mock
+    private JsonNode arrayElement;
+
+    @Mock
+    private CSVWriter csvWriter;
+
+    private Map<String, CSVWriter> csvWriters;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+        csvWriters = new HashMap<>();
+    }
+
+    @Test
+    public void testProcessJsonArrayElements_Success() throws IOException {
+        // Setup
+        String[] headerValue = {"column1", "column2"};
+        String locationId = "location1";
+
+        when(jsonNode.iterator()).thenReturn(Collections.singletonList(arrayElement).iterator());
+        when(arrayElement.path("locationId").asText()).thenReturn(locationId);
+        when(JsonProcessor.getLocationId(arrayElement)).thenReturn(locationId);
+        when(JsonProcessor.createCsvWriter(anyString(), eq(locationId), eq(headerValue))).thenReturn(csvWriter);
+
+        // Test
+        JsonProcessor.processJsonArrayElements(jsonNode, "resourceDir", headerValue, csvWriters);
+
+        // Verify
+        verify(csvWriter).writeNext(any(String[].class));
+        assertTrue(csvWriters.containsKey(locationId));
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testProcessJsonArrayElements_CSVWriterCreationFails() throws IOException {
+        // Setup
+        String[] headerValue = {"column1", "column2"};
+        String locationId = "location1";
+
+        when(jsonNode.iterator()).thenReturn(Collections.singletonList(arrayElement).iterator());
+        when(JsonProcessor.getLocationId(arrayElement)).thenReturn(locationId);
+        when(JsonProcessor.createCsvWriter(anyString(), eq(locationId), eq(headerValue)))
+                .thenThrow(new IOException("Error creating CSVWriter"));
+
+        // Test
+        JsonProcessor.processJsonArrayElements(jsonNode, "resourceDir", headerValue, csvWriters);
+
+        // The RuntimeException should be thrown, so the following verification won't be reached
+        fail("Expected RuntimeException was not thrown.");
+    }
+
+    @Test
+    public void testProcessJsonArrayElements_CSVWriterIsNull() throws IOException {
+        // Setup
+        String[] headerValue = {"column1", "column2"};
+        String locationId = "location1";
+
+        when(jsonNode.iterator()).thenReturn(Collections.singletonList(arrayElement).iterator());
+        when(JsonProcessor.getLocationId(arrayElement)).thenReturn(locationId);
+        when(JsonProcessor.createCsvWriter(anyString(), eq(locationId), eq(headerValue))).thenReturn(null);
+
+        // Test
+        JsonProcessor.processJsonArrayElements(jsonNode, "resourceDir", headerValue, csvWriters);
+
+        // Verify
+        assertFalse(csvWriters.containsKey(locationId));
+    }
+
+    // Add more test cases as needed for edge cases
+}
+
 ===============================================
 private static void processJsonArrayElements(JsonNode jsonNode, String resourceDirectory,
             String[] headerValue, Map<String, CSVWriter> csvWriters) throws IOException {
