@@ -1,3 +1,85 @@
+==================================================
+import static org.mockito.Mockito.*;
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.*;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+import java.util.*;
+
+public class YourServiceTest {
+
+    @InjectMocks
+    private YourService yourService; // Replace with the actual class name
+
+    @Mock
+    private RestTemplate restTemplate;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    public void testLoadApiData_Success() {
+        // Setup
+        GenericDataBaseResponseDTO responseDto = new GenericDataBaseResponseDTO();
+        responseDto.setDataList(Collections.singletonList(
+                Collections.singletonList(new GenericDataBaseColumnDTO("resourceDirectory:{\"resourceDirectory\":\"/path/to/dir\",\"header\":\"header1\"}"))));
+
+        ResponseEntity<List<GenericDataBaseResponseDTO>> responseEntity = new ResponseEntity<>(
+                Collections.singletonList(responseDto), HttpStatus.OK);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)))
+                .thenReturn(responseEntity);
+
+        // Test
+        ExternalInterfaceResponse response = yourService.loadApiData();
+
+        // Verify
+        assertNotNull(response);
+        assertEquals("/path/to/dir", response.getRawBusinessResponse().get(0));
+        assertArrayEquals(new String[]{"header1"}, (String[]) response.getRawBusinessResponse().get(1));
+    }
+
+    @Test
+    public void testLoadApiData_EmptyResponseBody() {
+        // Setup
+        ResponseEntity<List<GenericDataBaseResponseDTO>> responseEntity = new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)))
+                .thenReturn(responseEntity);
+
+        // Test
+        ExternalInterfaceResponse response = yourService.loadApiData();
+
+        // Verify
+        assertNotNull(response);
+        assertTrue(response.getRawBusinessResponse().isEmpty());
+    }
+
+    @Test
+    public void testLoadApiData_ExceptionHandling() {
+        // Setup
+        ResponseEntity<List<GenericDataBaseResponseDTO>> responseEntity = new ResponseEntity<>(
+                Collections.singletonList(new GenericDataBaseResponseDTO()), HttpStatus.OK);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)))
+                .thenReturn(responseEntity);
+
+        // Test
+        ExternalInterfaceResponse response = yourService.loadApiData();
+
+        // Verify
+        assertNotNull(response);
+        assertTrue(response.getRawBusinessResponse().isEmpty());
+    }
+}
+
 ====================================================
 public ExternalInterfaceResponse loadApiData() {
 		log.info("<<<<<<------ Entered ExternalInterfaceResponse loadApiData() ------>>>>>>");
