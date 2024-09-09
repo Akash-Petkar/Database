@@ -1,3 +1,194 @@
+============================================================================================
+Junit Code coverage
+package com.verizon.connect.svcinv.business.dataservice.services;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseRequestDTO;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseResponseDTO;
+
+public class TnInventoryReportServiceImplTest {
+
+    @Mock
+    private RestTemplate restTemplate;
+
+    @InjectMocks
+    private TnInventoryReportServiceImpl service;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testGetTnInvReport_EnterpriseId() {
+        TnInventoryReportRequest request = new TnInventoryReportRequest();
+        request.setEnterpriseId("Enterprise123");
+        
+        // Mock the response
+        ExternalInterfaceResponse mockResponse = new ExternalInterfaceResponse();
+        mockResponse.setRawBusinessResponse(Arrays.asList("path/to/resourceDirectory", new String[] {"header"}));
+        when(service.loadApiData()).thenReturn(mockResponse);
+
+        // Mock the REST call
+        ResponseEntity<List<GenericDataBaseResponseDTO>> mockDbResponse = mock(ResponseEntity.class);
+        when(mockDbResponse.getBody()).thenReturn(Arrays.asList(createMockDatabaseResponse()));
+        when(restTemplate.exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(mockDbResponse);
+
+        ExternalInterfaceResponse response = service.getTnInvReport(request);
+
+        assertNotNull(response);
+        assertEquals("0", response.getStatusCode());
+        assertEquals("Success", response.getStatusDescription());
+        assertNotNull(response.getRawBusinessResponse());
+    }
+
+    @Test
+    void testGetTnInvReport_LocationId() {
+        TnInventoryReportRequest request = new TnInventoryReportRequest();
+        request.setLocationId(Arrays.asList("Location123"));
+        
+        // Mock the response
+        ExternalInterfaceResponse mockResponse = new ExternalInterfaceResponse();
+        mockResponse.setRawBusinessResponse(Arrays.asList("path/to/resourceDirectory", new String[] {"header"}));
+        when(service.loadApiData()).thenReturn(mockResponse);
+
+        // Mock the REST call
+        ResponseEntity<List<GenericDataBaseResponseDTO>> mockDbResponse = mock(ResponseEntity.class);
+        when(mockDbResponse.getBody()).thenReturn(Arrays.asList(createMockDatabaseResponse()));
+        when(restTemplate.exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(mockDbResponse);
+
+        ExternalInterfaceResponse response = service.getTnInvReport(request);
+
+        assertNotNull(response);
+        assertEquals("0", response.getStatusCode());
+        assertEquals("Success", response.getStatusDescription());
+        assertNotNull(response.getRawBusinessResponse());
+    }
+
+    @Test
+    void testIsNonEmpty_String() {
+        assertTrue(service.isNonEmpty("Test"));
+        assertFalse(service.isNonEmpty(""));
+        assertFalse(service.isNonEmpty(null));
+    }
+
+    @Test
+    void testIsNonEmpty_List() {
+        assertTrue(service.isNonEmpty(Arrays.asList("Test")));
+        assertFalse(service.isNonEmpty(Arrays.asList()));
+        assertFalse(service.isNonEmpty(null));
+    }
+
+    @Test
+    void testGenerateDatabaseRequest() {
+        TnInventoryReportRequest request = new TnInventoryReportRequest();
+        request.setSource("CSSOP");
+
+        List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+        service.generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_FOR_CSSOP", Arrays.asList("Enterprise123"));
+
+        assertEquals(1, requestList.size());
+        assertEquals("CSSOP", requestList.get(0).getSourceService());
+        assertArrayEquals(new String[] {"Enterprise123"}, requestList.get(0).getColumnValues());
+    }
+
+    @Test
+    void testProcessDatabaseResponse(@TempDir Path tempDir) throws Exception {
+        TnInventoryReportRequest request = new TnInventoryReportRequest();
+        ExternalInterfaceResponse response = new ExternalInterfaceResponse();
+        response.setRawBusinessResponse(Arrays.asList(tempDir.toString(), new String[] {"header1,header2,header3"}));
+
+        List<GenericDataBaseResponseDTO> responseBody = Arrays.asList(createMockDatabaseResponse());
+
+        service.processDatabaseResponse(responseBody, tempDir.toString(), request, response);
+
+        assertTrue(Files.exists(tempDir.resolve("Location123_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + ".csv")));
+    }
+
+    private GenericDataBaseResponseDTO createMockDatabaseResponse() {
+        GenericDataBaseResponseDTO responseDTO = new GenericDataBaseResponseDTO();
+        // Mock dataList as needed for your tests
+        return responseDTO;
+    }
+
+    @Test
+    void testLoadApiData() {
+        // Mocking external data for loadApiData method
+        ResponseEntity<List<GenericDataBaseResponseDTO>> mockDbResponse = mock(ResponseEntity.class);
+        when(mockDbResponse.getBody()).thenReturn(Arrays.asList(createMockDatabaseResponse()));
+        when(restTemplate.exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(mockDbResponse);
+
+        ExternalInterfaceResponse response = service.loadApiData();
+
+        assertNotNull(response);
+        assertNotNull(response.getRawBusinessResponse());
+    }
+
+    @Test
+    void testGetLocationId() {
+        JsonNode mockJsonNode = mock(JsonNode.class);
+        when(mockJsonNode.get("columnName")).thenReturn(mock(JsonNode.class));
+        when(mockJsonNode.get("columnName").asText()).thenReturn("location_id");
+        when(mockJsonNode.get("columnValue")).thenReturn(mock(JsonNode.class));
+        when(mockJsonNode.get("columnValue").asText()).thenReturn("Location123");
+
+        String locationId = TnInventoryReportServiceImpl.getLocationId(mockJsonNode);
+
+        assertEquals("Location123", locationId);
+    }
+
+    @Test
+    void testCreateCsvWriter(@TempDir Path tempDir) throws Exception {
+        String[] headers = {"header1", "header2"};
+        CSVWriter writer = TnInventoryReportServiceImpl.createCsvWriter(tempDir.toString(), "Location123", headers);
+        writer.close();
+
+        Path filePath = tempDir.resolve("Location123_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + ".csv");
+        assertTrue(Files.exists(filePath));
+    }
+
+    @Test
+    void testProcessJson() throws Exception {
+        JsonNode mockJsonNode = mock(JsonNode.class);
+        ExternalInterfaceResponse mockResponse = new ExternalInterfaceResponse();
+        mockResponse.setRawBusinessResponse(Arrays.asList("path/to/resourceDirectory", new String[] {"header"}));
+
+        TnInventoryReportServiceImpl.processJson(mockJsonNode, "path/to/resourceDirectory", new TnInventoryReportRequest(), mockResponse);
+
+        // Additional assertions to verify the processJson behavior
+    }
+}
+
+============================================================================================
 package com.verizon.connect.svcinv.business.dataservice.services;
 
 import java.io.BufferedReader;
