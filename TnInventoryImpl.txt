@@ -1,3 +1,39 @@
+====================================================
+public ExternalInterfaceResponse loadApiData() {
+		log.info("<<<<<<------ Entered ExternalInterfaceResponse loadApiData() ------>>>>>>");
+
+		ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+		GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+		List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+		genericDataBaseRequestDTO.setSqlKey("GET_CSSOP_API_CONFIG");
+		genericDataBaseRequestDTO.setSourceService("INFRA-INTERFACE-SERVICE");
+
+		genericDataBaseRequestDTO.setColumnValues(new Object[] { "GET_TN_DETAILS_FOR_CSSOP" });
+		requestList.add(genericDataBaseRequestDTO);
+
+		HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList, new HttpHeaders());
+		ResponseEntity<List<GenericDataBaseResponseDTO>> genericDbResponse = restTemplate.exchange(configReadUrl,
+				HttpMethod.POST, requestEntity, new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+				});
+
+		try {
+			if (genericDbResponse.getBody() != null && !genericDbResponse.getBody().get(0).getDataList().isEmpty()) {
+				String value1 = genericDbResponse.getBody().get(0).getDataList().get(0).get(0).getColumnValue();
+				JSONObject jsonVal = new JSONObject(value1);
+
+				String resourceDirectory = jsonVal.getString("resourceDirectory");
+				String[] headers = { jsonVal.getString("header") };
+				externalInterfaceResponse.setRawBusinessResponse(Arrays.asList(resourceDirectory, headers));
+			}
+		} catch (Exception e) {
+			log.error(ERROR, e.getMessage());
+		}
+
+		log.info("<<<<<<------ Exited ExternalInterfaceResponse loadApiData() ------>>>>>>"
+				+ externalInterfaceResponse.getRawBusinessResponse());
+		return externalInterfaceResponse;
+	}
 =============================================
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
