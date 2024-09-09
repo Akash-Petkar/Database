@@ -1,3 +1,24 @@
+============================================================
+public static void processJsonArrayElements(JsonNode jsonNode, String resourceDirectory, String[] headerValue,
+			Map<String, CSVWriter> csvWriters) {
+		for (JsonNode arrayElement : jsonNode) {
+			String locationId = getLocationId(arrayElement);
+			CSVWriter csvWriter = csvWriters.computeIfAbsent(locationId, id -> {
+				try {
+					return createCsvWriter(resourceDirectory, id, headerValue);
+				} catch (Exception e) {
+					log.error(ERROR, e.getMessage());
+				}
+				return null;
+			});
+
+			if (csvWriter != null) {
+				processArrayElement(arrayElement, csvWriter);
+			} else {
+				log.warn("CSVWriter is null for locationId: " + locationId);
+			}
+		}
+	}
 ==================================================
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
