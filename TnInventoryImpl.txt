@@ -1,3 +1,19 @@
+===================================================
+ private static void processJsonArrayElements(JsonNode jsonNode, String resourceDirectory,
+            String[] headerValue, Map<String, CSVWriter> csvWriters) throws IOException {
+               for (JsonNode arrayElement : jsonNode) {
+                 String locationId = getLocationId(arrayElement);
+                 CSVWriter csvWriter = csvWriters.computeIfAbsent(locationId, id -> {
+					try {
+						return createCsvWriter(resourceDirectory, id, headerValue);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					return null;
+				});
+                   processArrayElement(arrayElement, csvWriter);
+               }
+             }
 ================================================
 Updated Code
 public static void processJson(JsonNode jsonNode, String resourceDirectory,
