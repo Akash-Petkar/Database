@@ -1,3 +1,34 @@
+===================================================
+Sonar Issue
+public static void processJson(JsonNode jsonNode, String resourceDirectory,
+                                   ExternalInterfaceResponse response) {
+    	Map<String, CSVWriter> csvWriters = new HashMap<>();
+    	try {
+    		JSONObject jsonVal = new JSONObject(response);
+    		 JSONArray rawDataArray = jsonVal.getJSONArray("rawBusinessResponse");
+    		 JSONArray headerVal = rawDataArray.getJSONArray(1);
+    		 String headerColumnValues = headerVal.getString(0);
+    		 String[] headerValue = headerColumnValues.substring(1, headerColumnValues.length() - 1).split(",");
+    		 try {
+    			 for(JsonNode arrayElement:jsonNode) {
+        			 String locationId = getLocationId(arrayElement);
+        			 if(!csvWriters.containsKey(locationId)) {
+        				 CSVWriter csvWriter = createCsvWriter(resourceDirectory, locationId, headerValue);
+        				 csvWriters.put(locationId, csvWriter);
+        			 }
+        			 processArrayElement(arrayElement, csvWriters.get(locationId));
+        		 }
+        		 
+        		 for(CSVWriter writer : csvWriters.values()) {
+        			 writer.close();
+        		 }
+			} catch (IOException e) {
+				log.error(ERROR, e);
+			}  		
+		} catch (Exception e) {
+			log.error(ERROR, e);
+		}
+    }
 =============================================
 Controller
 
