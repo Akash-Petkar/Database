@@ -1,3 +1,26 @@
+
+===========================================================================
+SELECT * 
+FROM ordng.t_entity_spec_mapping
+WHERE entity_name = 'LOCATION' 
+  AND order_type = 'CHANGE'
+  AND service_type = 'IP_INTEGRATED_ACCESS_ET'
+  AND source = 'CSSOP'
+  AND flow = 'VRD-TSO'
+  AND region = 'US'
+  AND spec_code NOT IN (
+    'WEB_LANGUAGE', 'NS_CLLI', 'LOCATION_ID', 'LOCATION_NAME', 'VOIP_SERVICE_TYPE', 
+    'LOC_CITY', 'LOC_STATE', 'LOC_ZIP', 'LOC_COUNTRY', 'BS_AS_PROFILE', 
+    'BS_NS_PROV_USER', 'BS_AS_ID', 'BS_AS_NAME', 'BS_AS_IP_ADDRESS', 'BS_CLLI', 
+    'BS_NODENAME', 'NS_AS_PROFILE', 'ENTERPRISE_ID', 'SIP_DOMAIN', 'EXTENSION_LENGTH', 
+    'LINE_PORT_LENGTH', 'HYBRID_SERVICE_TYPE', 'NPANXX', 'TIME_ZONE', 'VM_LANG', 
+    'WEB_LANG', 'RPID', 'ACCESS_TYPE', 'UNSCREENED_ANI', 'SCREENED_TN', 
+    'SUBAGENCY_HIER_CODE', 'LOC_CCL_IND', 'BILL_TYPE', 'CIRCUIT_ID', 
+    'PRIVATE_NUM_LENGTH', 'TOTAL_PUBLIC_NUMBERS', 'MARKET_TYPE', 'VM_TYPE', 
+    'BILLING_ACTIVATED', 'CALL_FWD_PLAN_NAME', 'ENTERPRISE_TRUNK_ID', 'LOR_FLAG', 
+    'CLID_FIRST_NAME', 'CLID_LAST_NAME', 'NS_PROV_USER'
+  );
+
 ============================================================================
 WEB_LANGUAGE
 WEB_LANGUAGE
