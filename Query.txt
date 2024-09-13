@@ -1,5 +1,81 @@
 TN-IventoryReport
-===============================================================
+===================================================================
+{
+	"attributeValue": [
+		{
+			"specName": "ACTIVE_IND",
+			"specValue": "ACTIVE"
+		},
+		{
+			"specName": "PORTING_CODE",
+			"specValue": "F7X204635T33"
+		}
+	]
+}
+==============================================================
+select
+	totaldata.*,
+	svi.entity_name,
+	(
+	select
+	MAX(case when (data.specName = 'LOCATION_TYPE') then specValue else null end)
+	from
+	(
+	  select
+	     obj1->>'specName' specName,
+		 obj1->>'specValue' specValue
+	  from
+		svcinv.t_service_inventory svm,
+		jsonb_array_elements(svm.entity_attributes->'entityAttributes') obj1
+	  where 
+	    svm.entity_id=svi.entity_id
+	  ) as data) as location_type,
+	case 
+		when user_id is not null then
+	    'PRIMARY'
+		     else 'UNK'
+		   end as type,
+	case 
+		when user_id is not null and subscriber_id <> '0' then 'SUBSCRIBER'
+		     else 'UNK'
+		   end as resourcetype
+	from
+		(
+		select
+		    row_number() over() as rn,
+		    data.tn as tn,
+		    data.location_id as location_id,
+		    data.customer_id as customer_id,
+		    data.tn_status as tn_status,
+		    MAX(case when (data.specName = 'CALLING_LINE_ID_FIRST_NAME') then specValue else null end) as calling_line_id_first_name,
+			MAX(case when (data.specName = 'CALLING_LINE_ID_LAST_NAME') then specValue else null end) as calling_line_id_last_name,
+			MAX(case when (data.specName = 'USER_ID') then specValue else null end) as user_id,
+			MAX(case when (data.specName = 'SUBSCRIBER_ID') then specValue else null end) as subscriber_id
+		from
+			(
+			select distinct 
+			    tsi.tn as tn,
+			    tsi.location_id as location_id,
+			    tsi.customer_id as customer_id,
+			    tsi.tn_status as tn_status,
+				obj->>'specName' specName,
+				obj->>'specValue' specValue
+			from
+				 svcinv.v_tn_inventory tsi,
+				jsonb_array_elements(tsi.tn_attributes->'attributeValue') obj
+			where
+				tsi.customer_id = '400304359'
+		) as data
+		group by
+			tn,
+		    location_id,
+		    customer_id,
+		   tn_status) as totaldata
+		  left join svcinv.t_service_inventory svi
+		    on totaldata.location_id = svi.entity_id
+		    and 
+		       svi.entity_type = 'LOCATION';
+===================================================================
 Junit Test Case
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
