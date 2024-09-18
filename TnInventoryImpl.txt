@@ -1,3 +1,24 @@
+=======================================================================================
+SELECT *FROM ( SELECT location_id, location_name, tn, clid_first_name,TN_POOL_ID,clid_last_name,tn_status, TYPE, resourcetype, rownum rn FROM ( SELECT e.location_id,e.location_name,e.tn,nvl(nvl(e.clid_first_name, e.cid_first_name), '') AS clid_first_name, 
+nvl(nvl(e.clid_last_name, e.cid_last_name), '') AS clid_last_name, 
+DECODE(e.tn_status, 1, 'ASSIGNED', 2, 'AVAILABLE') AS tn_status,e.TN_POOL_ID, 
+CASE WHEN iasa_sd.userid IS NOT NULL THEN 'PRIMARY' 
+WHEN fc.event_type IS NOT NULL THEN 'ALTERNATE' ELSE 'UNK' END AS TYPE, CASE 
+WHEN iasa_s.device_type IS NOT NULL THEN 'VMA' WHEN iasa_sd.userid IS NOT NULL 
+AND iasa_sd.subid <> 0 THEN 'SUBSCRIBER' ELSE 'UNK' END AS resourcetype FROM ( 
+SELECT p.tn, l.location_id, l.location_name, p.tn_status, p.TN_POOL_ID, 
+et.clid_first_name, et.clid_last_name, tg.cid_first_name, tg.cid_last_name FROM 
+tbl_enterprise@ESAP.WORLD e JOIN tbl_location@ESAP.WORLD l ON 
+( e.enterprise_id = l.enterprise_id ) JOIN tbl_public_tn_pool@ESAP.WORLD p ON 
+( p.location_id = l.location_id ) LEFT OUTER JOIN tbl_tso_et_tn@ESAP.WORLD et ON 
+( et.tn_pool_id = p.tn_pool_id ) LEFT OUTER JOIN tbl_group_tn@ESAP.WORLD tg ON 
+( tg.tn_pool_id = p.tn_pool_id ) WHERE e.enterprise_id = :ENTERPRISEID )e 
+LEFT OUTER JOIN ( SELECT subid, userid FROM ipcom_subscriber_id WHERE 
+natuserid = 1 ) iasa_sd ON ( e.tn = iasa_sd.userid ) LEFT OUTER JOIN ( SELECT 
+device_type, subid FROM ipcom_subscriber WHERE device_type = 'VMA' ) iasa_s ON 
+( iasa_s.subid = iasa_sd.subid ) LEFT OUTER JOIN ( SELECT event_type FROM 
+ipcom_feature_change WHERE feature_id = 52 AND event_end IS NULL ) fc ON 
+( fc.event_type = e.tn ) ORDER BY e.tn));
 ===============================================================================
 select
 	totaldata.rn,
