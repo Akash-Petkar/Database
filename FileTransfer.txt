@@ -1,0 +1,167 @@
+@Override
+	public ResponseEntity<Object> writeFilesToRemoteFilePath(
+			@ApiParam(value = "Business details", required = true) @Valid @RequestBody FileHandlerRequest fileHandlerRequest) throws AppException, IntfFileHandlerException {
+		logger.info("begin writeFilesToRemoteFilePath");
+		FileHandlerResponse fileHandlerResponse = fileHandlerBusinessService.writeFilesToRemoteFilePath(fileHandlerRequest);
+		logger.info("end writeFilesToRemoteFilePath {}", InfrastructureCommonUtil.convertToJSON(fileHandlerResponse));
+		return new ResponseEntity<>(fileHandlerResponse,HttpStatus.OK);
+	}
+
+=============================================================================
+@Override
+	public FileHandlerResponse writeFilesToRemoteFilePath(FileHandlerRequest fileHandlerRequest)
+			throws AppException, IntfFileHandlerException {
+		logger.info("begin writeFilesToRemoteFilePath");
+		FileHandlerResponse fileHandlerResponse = new FileHandlerResponse();
+		ResponseDetails responseDetails = null;
+
+		String envStatusProfile = String.valueOf(executionContext.get(ENV_STATUS_PROFILE));
+		logger.info("envStatusProfile ::::::::::::; {} ", envStatusProfile);
+		String allowStatusFlag = String.valueOf(batchLoadPathMap.get(envStatusProfile).getEnvStatusFlag());
+		logger.info("allowStatusFlag ::::::::::::; {} ", allowStatusFlag);
+		
+		if (ALLOW_STATUS_FLAG.equalsIgnoreCase(allowStatusFlag)) {
+			writeRemoteFileHandler.filesTransferFromLocalToRemote(
+					String.valueOf(fileHandlerRequest.getFileParams().get(KEY)), fileHandlerRequest.getCurrentMdc(),
+					Boolean.valueOf(String.valueOf(fileHandlerRequest.getFileParams().get(IS_FILES_TO_BE_LISTED))),
+					Boolean.valueOf(String.valueOf(fileHandlerRequest.getFileParams().get(POLLING_ON_BACKUP_FILES))));
+
+			responseDetails = setResponseDetails("Initiated to write files to remote FilePath");
+		} else {
+			responseDetails = setResponseDetails("Current profile is not active to process further");
+		}
+		fileHandlerResponse.setResponseDetails(responseDetails);
+
+		logger.info("end writeFilesToRemoteFilePath");
+		return fileHandlerResponse;
+	}
+
+===============================================================================================
+@Async("orderScheduleExec")
+	@TrackResponseTime(method = Method.SERVICE)
+	public void filesTransferFromLocalToRemote(String key, Map<String, String> currentMdc, boolean isFilesToBeListed,
+			boolean pollingOnBackUp) throws IntfFileHandlerException {
+		boolean isFilesListed = false;
+		boolean isTmpDirCreated = false;
+		
+		logger.info("file transfer from Local K8s to remote server :: Execution Time - {} :::: key {}",
+				dateTimeFormatter.format(LocalDateTime.now()), key);
+
+		MDC.setContextMap(currentMdc);
+
+		if (!StringUtils.isEmpty(batchLoadPathMap.get(key))) {
+
+			// create tmp feed directory
+			String scptempFeeddir = batchLoadPathMap.get(key).getK8sTmpFilePath();
+			isTmpDirCreated = interfaceFileHandlerUtil.createFeedDirectory(scptempFeeddir);
+			isTmpDirCreated(isTmpDirCreated);
+		
+			String fileName = retrieveFileName(pollingOnBackUp, key);
+			if (StringUtils.isEmpty(fileName)) {
+				logger.info("No files to read in K8s/Backup file paths :::::::::  ");
+				return;
+			}
+
+			if (isFilesToBeListed) {
+				logger.info("list the files on remote server  :::::::: key {} ", key);
+				isFilesListed = listFilesAtRemoteServer(key);
+				setAuditInfo(key, fileName, LISTED_REMOTE_SERVER_SUCCESSFUL);
+			}
+
+			if (!isFilesListed && !pollingOnBackUp) {
+				writeFileToRemoteServer(fileName, key);
+			}
+
+			if (!isFilesListed && pollingOnBackUp) {
+				writeFileToRemoteServerFromBackup(fileName, key);
+			}
+
+		}
+
+		logger.info("Remote file transfer Current Thread : {}", Thread.currentThread().getName());
+	}
+
+============================================================================
+@TrackResponseTime(method = Method.SERVICE)
+	private void writeFileToRemoteServer(String fileName, String key) throws IntfFileHandlerException {
+
+		boolean isFileCopiedRemotely = false;
+		boolean isFileCopiedToFileSys;
+
+		if (!StringUtils.isEmpty(fileName)) {
+			String extractedFileName= extractFileNameFromFilePath(fileName);
+			logger.info("extractedFileName {} ::::::::::::::::: ", extractedFileName);
+			
+			String cpyFileSyscmd = MessageFormat.format(appConfig.getFileConfigs().getScpWriteRemoteFileCommand(),
+					fileName, batchLoadPathMap.get(key).getBackUpRemoteUser(),
+					batchLoadPathMap.get(key).getBackUpRemoteHost(),
+					batchLoadPathMap.get(key).getBackUpRemoteFileWritePath());
+
+			isFileCopiedToFileSys = copyToRemoteFolder(cpyFileSyscmd);
+			setAuditInfo(key, extractedFileName, cpyFileSyscmd.concat(COPIED_FILES_BACKUP_SERVER_SUCCESSFUL));
+			if (!isFileCopiedToFileSys) {
+				logger.info("Error in executing scp command or error in writing file to back up remote server");
+
+			}
+
+			String cpyRmtcmd = MessageFormat.format(appConfig.getFileConfigs().getScpWriteRemoteFileCommand(), fileName,
+					batchLoadPathMap.get(key).getRemoteUser(), batchLoadPathMap.get(key).getRemoteHost(),
+					batchLoadPathMap.get(key).getRemoteFileWritePath());
+			isFileCopiedRemotely = copyToRemoteFolder(cpyRmtcmd);
+			setAuditInfo(key, extractedFileName, COPIED_FILE_REMOTE_PATH_SUCCESSFUL.concat(cpyRmtcmd));
+			if (!isFileCopiedRemotely) {
+				logger.info("Error in executing scp command or error in writing file to remote server");
+			} else {
+
+				logger.info(
+						"File successfully copied to remote server, proceed to delete the file from K8s  :::::::: key {} ",
+						key);
+				try {
+					Thread.sleep(appConfig.getFileConfigs().getWriteSleepTime());
+				}catch(InterruptedException e){
+					logger.error("InterruptedException exception {}", e);
+					Thread.currentThread().interrupt();
+				}
+				deleteFile(fileName);
+				setAuditInfo(key, extractedFileName, DELETED_FILE_K8S_SUCCESSFUL.concat(fileName));
+			}}
+	}
+====================================================================================
+@TrackResponseTime(method = Method.SERVICE)
+	public boolean copyToRemoteFolder(String cpyRmtcmd) throws IntfFileHandlerException {
+		boolean isFileCopied = false;
+		logger.info("copyToRemoteFolder::begin");
+		Instant startTime = Instant.now();
+		try {
+
+			logger.info("copyToRemoteFolder::cpyRmtcmd->{}", cpyRmtcmd);
+
+		
+			isFileCopied = interfaceFileHandlerUtil.executeCommand(cpyRmtcmd, false, CPY_FILES_REMOTE);
+			logger.info("copyToRemoteFolder::isFileCopied {} ", isFileCopied);
+
+		} catch (IntfFileHandlerException e) {
+			logger.error("downloadRemoteFiles()::exception: {} and StackTrace:{}", e, e.getException());
+			throw e;
+		}
+		Instant endTime = Instant.now();
+		logger.info("copyToRemoteFolder::end::total time in millis->{}",
+				Duration.between(startTime, endTime).toMillis());
+		return isFileCopied;
+	}
+=================================================================================
+public boolean executeCommand(String cmd, boolean result, String flow) throws IntfFileHandlerException {
+		logger.info("::::::: executeCommand begin ::::::: flow {} cmd {} result {} ", flow, cmd, result);
+		AtomicInteger counter = new AtomicInteger(0);
+		boolean commandResult = false;
+		while (checkRetryCount(counter, commandResult)) {
+			String[] cmdArr = { "bash", "-c", cmd };
+			int returnVal = cmdUtil.runCommand(cmdArr, false);
+			commandResult = returnVal == 0 ? true : false;
+			if (!result) {
+				setThreadToSleep(flow);
+			}
+		}
+
+		return commandResult;
+	}
