@@ -1,3 +1,8 @@
+Username: cssopfeed
+Path: /home/cssopfeed/esaptnreports/inbound
+Host: abrdmdcspfs1q1v.vzbi.com
+Port: 22
+==========================================================
 package com.verizon.connect.svcinv.business.dataservice.services;
 
 import java.io.BufferedReader;
