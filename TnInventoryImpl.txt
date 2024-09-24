@@ -1,3 +1,244 @@
+
+package com.verizon.connect.svcinv.business.dataservice.controller;
+
+import javax.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.verizon.connect.infrastructure.exception.handler.AppException;
+import com.verizon.connect.svcinv.business.dataservice.dto.DomainACKResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCustomCodegen", date = "2019-06-20T11:47:01.810+05:30")
+
+public interface TnInventoryReportApi {
+
+	@ApiOperation(value = "get TNINV Report", notes = "get TNINV Report", response = Object.class, tags = {
+			"svcinvExternalInterfaceRequest", })
+	@ApiResponses(value = { @ApiResponse(code = 200, message = "Success", response = Object.class),
+			@ApiResponse(code = 400, message = "Bad Input Parameter", response = Object.class) })
+	@RequestMapping(value = "/getTnInvReportApi",produces = { "application/optet" }, method = RequestMethod.POST)
+	default ResponseEntity<DomainACKResponse> getTnInvReport(
+			@ApiParam(value = "getTnInvReportApi", required = true) @Valid @RequestBody ServiceInventoryBussinessDto body)
+			throws AppException, JsonProcessingException {
+		
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+}
+==============================================================
+package com.verizon.connect.svcinv.business.dataservice.controller;
+
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100;
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100_DES;
+
+import javax.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.verizon.connect.infrastructure.exception.handler.AppException;
+import com.verizon.connect.infrastructure.util.InfrastructureCommonUtil;
+import com.verizon.connect.svcinv.business.dataservice.dto.DomainACKResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ResponseDetails;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+import com.verizon.connect.svcinv.business.dataservice.services.TnInventoryReportService;
+
+import io.swagger.annotations.ApiParam;
+
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCustomCodegen", date = "2019-06-18T11:52:35.592+05:30")
+
+@RestController
+@Validated
+@CrossOrigin
+public class TnInventoryReportApiRestController implements TnInventoryReportApi{
+
+	private static final Logger log = LoggerFactory.getLogger(TnInventoryReportApiRestController.class);
+	
+	@Autowired
+	private TnInventoryReportService  tnInventoryReportService;
+	
+	@Override
+	public ResponseEntity<DomainACKResponse> getTnInvReport(@ApiParam(value = "getTnInvReportApi", required = true) @Valid @RequestBody ServiceInventoryBussinessDto serviceInventoryBussinessDto)
+			throws AppException, JsonProcessingException{
+		
+		log.info("Entered SvcinvWriteDatabaseApiRestController.getTnInvReport()");
+		
+		DomainACKResponse domainACKResponse = new DomainACKResponse();
+		ResponseDetails ackResponse = new ResponseDetails();
+		ackResponse.setStatusCode(CONN_SVCINV_NE_100);
+		ackResponse.setStatusDescription(CONN_SVCINV_NE_100_DES);
+		domainACKResponse.setAckResponse(ackResponse);
+		
+		log.info("Acknowledged getTnInvReport request : {}", InfrastructureCommonUtil.convertToJSON(serviceInventoryBussinessDto));
+
+		 tnInventoryReportService.getTnInvReport(serviceInventoryBussinessDto);
+		 
+		 log.info("Extited TnInventoryReportApiRestController.getTnInvReport(.....)");
+		
+		return new ResponseEntity<>(domainACKResponse, HttpStatus.OK);
+		
+	}
+}
+
+======================================================
+import javax.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.verizon.connect.infrastructure.exception.handler.AppException;
+import com.verizon.connect.svcinv.business.dataservice.dto.CacheRefreshRespDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.DomainACKResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceRequest;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCustomCodegen", date = "2019-06-20T11:47:01.810+05:30")
+
+@Api(value = "svcinv", description = "The service Inventory API")
+
+public interface SvcinvBussinessServiceApi {
+
+	@ApiOperation(value = "Add Servie Releted details to Service Inventory domain.", notes = "Add Servie Releted details to Service Inventory domain.", response = Object.class, tags = {
+			"svcinv", })
+
+	@ApiResponses(value = { @ApiResponse(code = 200, message = "Success", response = Object.class),
+			@ApiResponse(code = 400, message = "Bad Input Parameter", response = Object.class) })
+
+	@RequestMapping(value = "/service", produces = { "application/json" }, method = RequestMethod.POST)
+	default ResponseEntity<DomainACKResponse> addSvcInv(
+			@ApiParam(value = "Persist data to Service Inventory", required = true) @Valid @RequestBody ServiceInventoryBussinessDto body)
+			throws AppException, JsonProcessingException {
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+========================================================
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100;
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100_DES;
+import static com.verizon.connect.svcinv.business.dataservice.constants.SvcinvBusinessServiceConstants.AGGREGATOR_ADD;
+import static com.verizon.connect.svcinv.business.dataservice.constants.SvcinvBusinessServiceConstants.AGGREGATOR_DELETE;
+import static com.verizon.connect.svcinv.business.dataservice.constants.SvcinvBusinessServiceConstants.AGGREGATOR_UPDATE;
+import static com.verizon.connect.svcinv.business.dataservice.constants.SvcinvBusinessServiceConstants.GENERIC_INSTALL;
+import static com.verizon.connect.svcinv.business.dataservice.constants.SvcinvBusinessServiceConstants.GENERIC_UPDATE;
+
+import java.util.Map;
+
+import javax.validation.Valid;
+
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.verizon.connect.infrastructure.exception.handler.AppException;
+import com.verizon.connect.infrastructure.util.InfrastructureCommonUtil;
+import com.verizon.connect.svcinv.business.dataservice.aggregator.SvcinvBusinessServiceAggregator;
+import com.verizon.connect.svcinv.business.dataservice.config.CacheMappingConfigFromDbOnStartUp;
+import com.verizon.connect.svcinv.business.dataservice.dto.CacheRefreshRespDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.DomainACKResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceRequest;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ResponseDetails;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+import com.verizon.connect.svcinv.business.dataservice.services.SvcinvBusinessService;
+import com.verizon.connect.svcinv.business.dataservice.util.ProcessServiceUtil;
+
+import io.swagger.annotations.ApiParam;
+
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCustomCodegen", date = "2019-06-18T11:52:35.592+05:30")
+
+@RestController
+@Validated
+@CrossOrigin
+public class SvcinvBussinessServiceApiRestController implements SvcinvBussinessServiceApi {
+
+	private static final Logger log = LoggerFactory.getLogger(SvcinvBussinessServiceApiRestController.class);
+
+	@Autowired
+	private CacheMappingConfigFromDbOnStartUp cachedMappingConfigFromDbOnStartUp;
+
+	@Autowired
+	private SvcinvBusinessServiceAggregator svcinvBusinessServiceAggregator;
+	
+	@Autowired
+	private SvcinvBusinessService svcinvBusinessService;
+
+	/**
+	 * @throws AppException
+	 * @throws JsonProcessingException
+	 * @see SvcinvBussinessServiceApi#addOrder
+	 */
+	@Override
+	public ResponseEntity<DomainACKResponse> addSvcInv(
+			@ApiParam(value = "Service Inventory related data to persist in Service Inventory domain", required = true) @Valid @RequestBody ServiceInventoryBussinessDto serviceInventoryBussinessDto)
+			throws AppException, JsonProcessingException {
+
+		log.info("Entered SvcinvBussinessServiceApiRestController.addSvcInv(.....)");
+
+		Map<String, String> currentMdc = MDC.getCopyOfContextMap();
+		DomainACKResponse domainACKResponse = new DomainACKResponse();
+		ResponseDetails ackResponse = new ResponseDetails();
+		ackResponse.setStatusCode(CONN_SVCINV_NE_100);
+		ackResponse.setStatusDescription(CONN_SVCINV_NE_100_DES);
+		domainACKResponse.setAckResponse(ackResponse);
+
+		log.info("Acknowledged addSvcCInventory request : {}", InfrastructureCommonUtil.convertToJSON(serviceInventoryBussinessDto));
+		svcinvBusinessServiceAggregator.processAndSendResponse(serviceInventoryBussinessDto, currentMdc,
+				AGGREGATOR_ADD);
+		log.info("Extited SvcinvBussinessServiceApiRestController.addSvcInv(.....)");
+		MDC.clear();
+		return new ResponseEntity<>(domainACKResponse, HttpStatus.OK);
+	}
+===============================================
+{
+  "ackResponse": {
+    "statusCode": "CE200",
+    "statusDescription": "Success"
+  }
+}
+===================================================
+<!doctype html><html lang="en"><head><title>HTTP Status 500 – Internal Server Error</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;} .line {height:1px;background-color:#525D76;border:none;}</style></head><body><h1>HTTP Status 500 – Internal Server Error</h1></body></html>
 =======================================================================================
 SELECT *FROM ( SELECT location_id, location_name, tn, clid_first_name,TN_POOL_ID,clid_last_name,tn_status, TYPE, resourcetype, rownum rn FROM ( SELECT e.location_id,e.location_name,e.tn,nvl(nvl(e.clid_first_name, e.cid_first_name), '') AS clid_first_name, 
 nvl(nvl(e.clid_last_name, e.cid_last_name), '') AS clid_last_name, 
