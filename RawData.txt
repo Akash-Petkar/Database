@@ -1,0 +1,86 @@
+String rawData2 = rawData.getBody().getRawData();
+===========================================================
+{
+	"serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-TSO",
+			"supp": false,
+			"suppField": false,
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Trunking",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "tnReportOrder_24_09_24_2",
+			"workOrderVersion": "0",
+			"originatingSystem": "CSSOP",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+		"services": {
+			"commonSpecifications": {
+				"specification": [
+					{
+						"code": "EnterpriseId",
+						"value": "104812815"
+					},
+					{
+						"code": "API_NAME",
+						"value": "getTnInventoryReport"
+					},
+					{
+						"code": "locationId",
+						"value": ""
+					},
+					{
+						"code": "REQUEST_ID",
+						"value": "e444f944-104812815-4e75-abc8-a2712cbbe2f4"
+					}
+				]
+			},
+			"convergedService": {
+				"serviceCapability": [
+					{
+						"entityType": "TNINVREPORT",
+						"actionCode": "CHANGE"
+					}
+				]
+			}
+		}
+	}
+}
+==================================================================
+TnInventoryReportRequest request = new TnInventoryReportRequest();
+===================
+package com.verizon.connect.svcinv.business.dataservice.dto;
+
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class TnInventoryReportRequest {
+
+	@JsonProperty("transactionId")
+	private String transactionId = null;
+	
+	@JsonProperty("requestId")
+	private String requestId = null;
+	
+	@JsonProperty("enterpriseId")
+	private String enterpriseId = null;
+	
+	@JsonProperty("locationId")
+	private List<String> locationId = null;
+	
+	@JsonProperty("source")
+	private String source = null;
+}
