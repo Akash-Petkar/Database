@@ -84,3 +84,63 @@ public class TnInventoryReportRequest {
 	@JsonProperty("source")
 	private String source = null;
 }
+========================================================================================
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TnInventoryReportRequestPopulator {
+
+    public static void main(String[] args) {
+        try {
+            // Sample rawData2 (JSON string)
+            String rawData2 = "{ \"serviceOrder\": { \"serviceOrderHeader\": { \"flow\": \"VRD-TSO\", \"supp\": false, \"suppField\": false, \"region\": \"US\", \"product\": \"VOIP\", \"orderType\": \"CHANGE\", \"serviceType\": \"IP Trunking\", \"functionCode\": \"RELEASE\", \"lineOfBusiness\": \"RETAIL_VOIP\", \"workOrderNumber\": \"tnReportOrder_24_09_24_2\", \"workOrderVersion\": \"0\", \"originatingSystem\": \"CSSOP\", \"userContact\": { \"id\": \"CSSOP\", \"firstName\": \"CSSOP\", \"lastName\": \"CSSOP\" } }, \"services\": { \"commonSpecifications\": { \"specification\": [ { \"code\": \"EnterpriseId\", \"value\": \"104812815\" }, { \"code\": \"API_NAME\", \"value\": \"getTnInventoryReport\" }, { \"code\": \"locationId\", \"value\": \"\" }, { \"code\": \"REQUEST_ID\", \"value\": \"e444f944-104812815-4e75-abc8-a2712cbbe2f4\" } ] }, \"convergedService\": { \"serviceCapability\": [ { \"entityType\": \"TNINVREPORT\", \"actionCode\": \"CHANGE\" } ] } } } }";
+
+            // Parse rawData2 JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(rawData2);
+
+            // Initialize TnInventoryReportRequest object
+            TnInventoryReportRequest request = new TnInventoryReportRequest();
+
+            // Extract data from JSON and set to request object
+            JsonNode serviceOrderHeaderNode = rootNode.path("serviceOrder").path("serviceOrderHeader");
+            if (!serviceOrderHeaderNode.isMissingNode()) {
+                request.setTransactionId(serviceOrderHeaderNode.path("workOrderNumber").asText(null));
+                request.setSource(serviceOrderHeaderNode.path("originatingSystem").asText(null));
+            }
+
+            // Extract specifications
+            JsonNode specificationArray = rootNode.path("serviceOrder").path("services").path("commonSpecifications").path("specification");
+            if (specificationArray.isArray()) {
+                List<String> locationIds = new ArrayList<>();
+                for (JsonNode spec : specificationArray) {
+                    String code = spec.path("code").asText();
+                    String value = spec.path("value").asText();
+
+                    if ("EnterpriseId".equals(code)) {
+                        request.setEnterpriseId(value);
+                    } else if ("REQUEST_ID".equals(code)) {
+                        request.setRequestId(value);
+                    } else if ("locationId".equals(code) && !value.isEmpty()) {
+                        locationIds.add(value);
+                    }
+                }
+                request.setLocationId(locationIds.isEmpty() ? null : locationIds);
+            }
+
+            // Output the populated request object
+            System.out.println("Transaction ID: " + request.getTransactionId());
+            System.out.println("Request ID: " + request.getRequestId());
+            System.out.println("Enterprise ID: " + request.getEnterpriseId());
+            System.out.println("Location IDs: " + request.getLocationId());
+            System.out.println("Source: " + request.getSource());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
