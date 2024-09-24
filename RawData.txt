@@ -1,3 +1,66 @@
+package com.verizon.connect.svcinv.business.dataservice.controller;
+
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100;
+import static com.verizon.connect.svcinv.business.dataservice.constants.ServiceResponseConstants.CONN_SVCINV_NE_100_DES;
+
+import javax.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.verizon.connect.infrastructure.exception.handler.AppException;
+import com.verizon.connect.infrastructure.util.InfrastructureCommonUtil;
+import com.verizon.connect.svcinv.business.dataservice.dto.DomainACKResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.ResponseDetails;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+import com.verizon.connect.svcinv.business.dataservice.services.TnInventoryReportService;
+
+import io.swagger.annotations.ApiParam;
+
+
+
+@RestController
+@Validated
+@CrossOrigin
+public class TnInventoryReportApiRestController implements TnInventoryReportApi{
+
+	private static final Logger log = LoggerFactory.getLogger(TnInventoryReportApiRestController.class);
+	
+	@Autowired
+	private TnInventoryReportService  tnInventoryReportService;
+	
+	@Override
+	public ResponseEntity<DomainACKResponse> getTnInvReport(@ApiParam(value = "getTnInvReportApi", required = true) @Valid @RequestBody ServiceInventoryBussinessDto serviceInventoryBussinessDto)
+			throws AppException, JsonProcessingException{
+		
+		log.info("Entered SvcinvWriteDatabaseApiRestController.getTnInvReport()");
+		
+		DomainACKResponse domainACKResponse = new DomainACKResponse();
+		ResponseDetails ackResponse = new ResponseDetails();
+		ackResponse.setStatusCode(CONN_SVCINV_NE_100);
+		ackResponse.setStatusDescription(CONN_SVCINV_NE_100_DES);
+		domainACKResponse.setAckResponse(ackResponse);
+		
+		log.info("Acknowledged addSvcCInventory request : {}", InfrastructureCommonUtil.convertToJSON(serviceInventoryBussinessDto));
+
+		 tnInventoryReportService.getTnInvReport(serviceInventoryBussinessDto);
+		
+		return new ResponseEntity<>(domainACKResponse, HttpStatus.OK);
+		
+	}
+}
+
+===========================================================
 String rawData2 = rawData.getBody().getRawData();
 ===========================================================
 {
