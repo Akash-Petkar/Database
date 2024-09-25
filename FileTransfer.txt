@@ -1,3 +1,74 @@
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SftpFileTransfer {
+
+    public static void main(String[] args) {
+        // SFTP credentials and file information
+        String username = "cssopfeed";
+        String host = "abrdmdcspfs1q1v.vzbi.com";
+        int port = 22;
+        String password = "your_password";  // Your password here
+        String remotePath = "/home/cssopfeed/esaptnreports/inbound/";
+        String localFilePath = "src/main/resources/myfile.csv";
+
+        try {
+            sendFileViaSFTP(username, password, host, port, remotePath, localFilePath);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void sendFileViaSFTP(String username, String password, String host, int port, 
+                                       String remotePath, String localFilePath)
+            throws IOException, InterruptedException {
+
+        // Create the Expect script for automating password entry
+        String expectScript = 
+            "#!/usr/bin/expect -f\n" +
+            "set timeout -1\n" +
+            "spawn sftp -o StrictHostKeyChecking=no -P " + port + " " + username + "@" + host + "\n" +
+            "expect \"password:\"\n" +
+            "send \"" + password + "\\r\"\n" +
+            "expect \"sftp>\"\n" +
+            "send \"put " + localFilePath + " " + remotePath + "\\r\"\n" +
+            "expect \"sftp>\"\n" +
+            "send \"exit\\r\"\n" +
+            "expect eof\n";
+
+        // Write the Expect script to a temporary file
+        File tempScriptFile = File.createTempFile("sftp-script", ".sh");
+        try (var writer = new java.io.FileWriter(tempScriptFile)) {
+            writer.write(expectScript);
+        }
+
+        // Ensure the script is executable
+        tempScriptFile.setExecutable(true);
+
+        // Execute the Expect script using ProcessBuilder
+        List<String> command = new ArrayList<>();
+        command.add(tempScriptFile.getAbsolutePath());
+
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectErrorStream(true);
+
+        Process process = pb.start();
+
+        // Wait for the process to complete
+        int exitCode = process.waitFor();
+        if (exitCode == 0) {
+            System.out.println("File transferred successfully to the server.");
+        } else {
+            System.err.println("File transfer failed.");
+        }
+
+        // Clean up the temporary script file
+        tempScriptFile.delete();
+    }
+}
+=====================================
 @Override
 	public ResponseEntity<Object> writeFilesToRemoteFilePath(
 			@ApiParam(value = "Business details", required = true) @Valid @RequestBody FileHandlerRequest fileHandlerRequest) throws AppException, IntfFileHandlerException {
