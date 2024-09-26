@@ -1,0 +1,208 @@
+public String getRawData(ServiceInventoryBussinessDto serviceInventoryBussinessDto) {
+		NonTnRawOrderSearchDto nonTnRawOrderSearchDto = new NonTnRawOrderSearchDto();
+		nonTnRawOrderSearchDto.setFunctionCode(serviceInventoryBussinessDto.getOrderHeader().getFunctionCode());
+		nonTnRawOrderSearchDto.setLob(serviceInventoryBussinessDto.getOrderHeader().getLineOfBusiness());
+		nonTnRawOrderSearchDto.setOrderNumber(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderNumber());
+		nonTnRawOrderSearchDto.setOrderVersion(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderVersion());
+		nonTnRawOrderSearchDto.setProductType(serviceInventoryBussinessDto.getOrderHeader().getProduct());
+		nonTnRawOrderSearchDto.setSourceSystem(serviceInventoryBussinessDto.getOrderHeader().getOriginatingSystem());
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<Object> httpEntity = new HttpEntity<>(nonTnRawOrderSearchDto,headers);
+		
+		String rawData2 = null;
+		try {
+			ResponseEntity<RawData> rawData = restTemplate.exchange(orderReadRawOrderUrl, HttpMethod.POST,httpEntity, RawData.class);
+			rawData2 = rawData.getBody().getRawData();			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return rawData2;
+	}
+
+
+==========================================
+public TnInventoryReportRequest getTnInvReportRequest(String rawData) {
+		ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode=null;
+		try {
+			rootNode = objectMapper.readTree(rawData);
+		} catch (JsonMappingException e) {
+			log.error(ERROR, e.getMessage());
+		} catch (JsonProcessingException e) {
+			log.error(ERROR, e.getMessage());
+		}
+				
+		TnInventoryReportRequest request = new TnInventoryReportRequest();
+		
+		JsonNode serviceOrderHeaderNode = rootNode.path("serviceOrder").path("serviceOrderHeader");
+        if (!serviceOrderHeaderNode.isMissingNode()) {
+            request.setTransactionId(serviceOrderHeaderNode.path("workOrderNumber").asText(null));
+            request.setSource(serviceOrderHeaderNode.path("originatingSystem").asText(null));
+        }
+
+        JsonNode specificationArray = rootNode.path("serviceOrder").path("services").path("commonSpecifications").path("specification");
+        if (specificationArray.isArray()) {
+            List<String> locationIds = new ArrayList<>();
+            for (JsonNode spec : specificationArray) {
+                String code = spec.path("code").asText();
+                String value = spec.path("value").asText();
+
+                if ("EnterpriseId".equals(code)) {
+                    request.setEnterpriseId(value);
+                } else if ("REQUEST_ID".equals(code)) {
+                    request.setRequestId(value);
+                } else if ("locationId".equals(code) && !value.isEmpty()) {
+                    locationIds.add(value);
+                }
+            }
+            request.setLocationId(locationIds.isEmpty() ? null : locationIds);
+        }
+        return request;
+	}
+
+=================================================
+@Async("threadPoolTaskExecutor")
+	@Override
+	public void getTnInvReport(ServiceInventoryBussinessDto serviceInventoryBussinessDto) {
+		String rawData = getRawData(serviceInventoryBussinessDto);
+		TnInventoryReportRequest request = getTnInvReportRequest(rawData);
+		
+		ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+		List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+		try {
+		
+			boolean hasEnterpriseID = isNonEmpty(request.getEnterpriseId());
+			boolean hasLocationId = isNonEmpty(request.getLocationId()) && !request.getLocationId().contains("");
+
+			if (hasEnterpriseID && hasLocationId || hasLocationId) {
+				generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_LOCATION_FOR_CSSOP",
+						request.getLocationId());
+			} else if (hasEnterpriseID) {
+				generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_FOR_CSSOP",
+						Arrays.asList(request.getEnterpriseId()));
+			} else {
+				throw new IllegalArgumentException("Invalid request: EnterpriseID or LocationId must be provided");
+			}
+
+			HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList,
+					new HttpHeaders());
+			ResponseEntity<List<GenericDataBaseResponseDTO>> genericDataBaseResponseDTORef = restTemplate.exchange(
+					svcInvReadUrl, HttpMethod.POST, requestEntity,
+					new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+					});
+
+			List<GenericDataBaseResponseDTO> responseBody = genericDataBaseResponseDTORef.getBody();
+			if (responseBody != null && !responseBody.get(0).getDataList().isEmpty()) {
+				externalInterfaceResponse.setRawBusinessResponse(responseBody);
+			}
+			
+            ExternalInterfaceResponse response = loadApiData();
+			
+			String pathforFileStorage = getPathForFileStorage(response);
+			processDatabaseResponse(responseBody, pathforFileStorage, response);
+			
+			fileTransfer.transferFileToServer();
+
+			log.info("Exited SvcinvBusinessServiceImpl.getTnInvReport(ExternalInterfaceRequest request)");
+			externalInterfaceResponse.setStatusCode("0");
+			externalInterfaceResponse.setStatusDescription("Success");
+		} catch (Exception e) {
+			log.error(ERROR, e);
+		}
+	}
+=============================================
+@Test
+    public void testGetTnInvReport_LocationId() {
+        
+        ServiceInvOrderHeaderDto svcInvOrdDto = new ServiceInvOrderHeaderDto();
+        svcInvOrdDto.setFunctionCode("RELEASE");
+        svcInvOrdDto.setLineOfBusiness("RETAIL_VOIP");
+        svcInvOrdDto.setWorkOrderNumber("tnReportOrder_25_09_24_1");
+        svcInvOrdDto.setWorkOrderVersion("0");
+        svcInvOrdDto.setProduct("VOIP");
+        svcInvOrdDto.setOriginatingSystem("CSSOP");
+        
+        ServiceInventoryBussinessDto serviceInventoryBussinessDto = new ServiceInventoryBussinessDto();
+        serviceInventoryBussinessDto.setOrderHeader(svcInvOrdDto);
+        
+        NonTnRawOrderSearchDto nonTnRawOrderSearchDto = new NonTnRawOrderSearchDto();
+		nonTnRawOrderSearchDto.setFunctionCode(serviceInventoryBussinessDto.getOrderHeader().getFunctionCode());
+		nonTnRawOrderSearchDto.setLob(serviceInventoryBussinessDto.getOrderHeader().getLineOfBusiness());
+		nonTnRawOrderSearchDto.setOrderNumber(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderNumber());
+		nonTnRawOrderSearchDto.setOrderVersion(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderVersion());
+		nonTnRawOrderSearchDto.setProductType(serviceInventoryBussinessDto.getOrderHeader().getProduct());
+		nonTnRawOrderSearchDto.setSourceSystem(serviceInventoryBussinessDto.getOrderHeader().getOriginatingSystem());
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<Object> httpEntity = new HttpEntity<>(nonTnRawOrderSearchDto,headers);
+        
+        String jsonResponse1 = "{\r\n"
+        		+ "	\"serviceOrder\": {\r\n"
+        		+ "		\"serviceOrderHeader\": {\r\n"
+        		+ "			\"flow\": \"VRD-TSO\",\r\n"
+        		+ "			\"supp\": false,\r\n"
+        		+ "			\"suppField\": false,\r\n"
+        		+ "			\"region\": \"US\",\r\n"
+        		+ "			\"product\": \"VOIP\",\r\n"
+        		+ "			\"orderType\": \"CHANGE\",\r\n"
+        		+ "			\"serviceType\": \"IP Trunking\",\r\n"
+        		+ "			\"functionCode\": \"RELEASE\",\r\n"
+        		+ "			\"lineOfBusiness\": \"RETAIL_VOIP\",\r\n"
+        		+ "			\"workOrderNumber\": \"tnReportOrder_25_09_24_1\",\r\n"
+        		+ "			\"workOrderVersion\": \"0\",\r\n"
+        		+ "			\"originatingSystem\": \"CSSOP\",\r\n"
+        		+ "			\"userContact\": {\r\n"
+        		+ "				\"id\": \"CSSOP\",\r\n"
+        		+ "				\"firstName\": \"CSSOP\",\r\n"
+        		+ "				\"lastName\": \"CSSOP\"\r\n"
+        		+ "			}\r\n"
+        		+ "		},\r\n"
+        		+ "		\"services\": {\r\n"
+        		+ "			\"commonSpecifications\": {\r\n"
+        		+ "				\"specification\": [\r\n"
+        		+ "					{\r\n"
+        		+ "						\"code\": \"EnterpriseId\",\r\n"
+        		+ "						\"value\": \"104812815\"\r\n"
+        		+ "					},\r\n"
+        		+ "					{\r\n"
+        		+ "						\"code\": \"API_NAME\",\r\n"
+        		+ "						\"value\": \"getTnInventoryReport\"\r\n"
+        		+ "					},\r\n"
+        		+ "					{\r\n"
+        		+ "						\"code\": \"locationId\",\r\n"
+        		+ "						\"value\": \"\"\r\n"
+        		+ "					},\r\n"
+        		+ "					{\r\n"
+        		+ "						\"code\": \"REQUEST_ID\",\r\n"
+        		+ "						\"value\": \"e444f944-104812815-4e75-abc8-a2712cbbe2f4\"\r\n"
+        		+ "					}\r\n"
+        		+ "				]\r\n"
+        		+ "			},\r\n"
+        		+ "			\"convergedService\": {\r\n"
+        		+ "				\"serviceCapability\": [\r\n"
+        		+ "					{\r\n"
+        		+ "						\"entityType\": \"TNINVREPORT\",\r\n"
+        		+ "						\"actionCode\": \"CHANGE\"\r\n"
+        		+ "					}\r\n"
+        		+ "				]\r\n"
+        		+ "			}\r\n"
+        		+ "		}\r\n"
+        		+ "	}\r\n"
+        		+ "}";
+        
+        RawData mockResponse1 = new RawData();
+        mockResponse1.setRawData(jsonResponse1);
+        
+        ResponseEntity<RawData> mockResponseEntity1 = new ResponseEntity<> (mockResponse1 , HttpStatus.OK);
+        Mockito.when(restTemplate.exchange(anyString(),Mockito.eq(HttpMethod.POST)
+        		,Mockito.eq(httpEntity),Mockito.eq(RawData.class))).thenReturn(mockResponseEntity1);
+
+         service.getTnInvReport(serviceInventoryBussinessDto);
+    
+    }
