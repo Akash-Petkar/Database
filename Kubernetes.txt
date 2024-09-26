@@ -1,0 +1,697 @@
+package com.verizon.connect.svcinv.business.dataservice.config;
+
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@ConfigurationProperties("infra-file-handler-config")
+public class ApplicationPropertiesConfig {
+
+	private FileConfigs fileConfigs;
+	
+	public FileConfigs getFileConfigs() {
+		return fileConfigs;
+	}
+	
+	public void setFileConfigs(FileConfigs fileConfigs) {
+		this.fileConfigs = fileConfigs;
+	}
+	
+	@ConfigurationProperties("fileConfigs")
+	public static class FileConfigs{
+
+		private String scpWriteRemoteFileCommand;
+		private Map<String,BatchLoadPathMap> batchLoadPathMap;
+		private int retryCount;
+		private Long readSleepTime;
+		private Long writeSleepTime;
+		
+		public Long getWriteSleepTime() {
+			return writeSleepTime;
+		}
+		public void setWriteSleepTime(Long writeSleepTime) {
+			this.writeSleepTime = writeSleepTime;
+		}
+		
+		public Long getReadSleepTime() {
+			return readSleepTime;
+		}
+		public void setReadSleepTime(Long readSleepTime) {
+			this.readSleepTime = readSleepTime;
+		}
+		
+		public int getRetryCount() {
+			return retryCount;
+		}
+		public void setRetryCount(int retryCount) {
+			this.retryCount = retryCount;
+		}
+		
+
+		public String getScpWriteRemoteFileCommand() {
+			return scpWriteRemoteFileCommand;
+		}
+		public void setScpWriteRemoteFileCommand(String scpWriteRemoteFileCommand) {
+			this.scpWriteRemoteFileCommand = scpWriteRemoteFileCommand;
+		}		
+		
+		public Map<String, BatchLoadPathMap> getBatchLoadPathMap() {
+			return batchLoadPathMap;
+		}
+		public void setBatchLoadPathMap(Map<String, BatchLoadPathMap> batchLoadPathMap) {
+			this.batchLoadPathMap = batchLoadPathMap;
+		}
+	}
+	
+	@Bean("batchLoadPathMap")
+	Map<String, BatchLoadPathMap> batchLoadPathMap() {
+
+		return new ConcurrentHashMap<>();
+	};
+	
+	@ConfigurationProperties("batchLoadPathMap")
+	public static class BatchLoadPathMap {
+		private String remoteUser;
+		private String remoteHost;
+		private String remotePassword;
+		private String remoteFilePath;
+		
+		public String getRemotePassword() {
+			return remotePassword;
+		}
+		public void setRemotePassword(String remotePassword) {
+			this.remotePassword = remotePassword;
+		}
+		
+		public String getRemoteUser() {
+			return remoteUser;
+		}
+		public void setRemoteUser(String remoteUser) {
+			this.remoteUser = remoteUser;
+		}
+		
+		public String getRemoteHost() {
+			return remoteHost;
+		}
+		public void setRemoteHost(String remoteHost) {
+			this.remoteHost = remoteHost;
+		}
+		
+		public String getRemoteFilePath() {
+			return remoteFilePath;
+		}
+		public void setRemoteFilePath(String remoteFilePath) {
+			this.remoteFilePath = remoteFilePath;
+		}
+	}
+}
+
+===========================================================================
+infra-file-handler-config:
+ fileConfigs:
+  scpWriteRemoteFileCommand: scp {0} {1}@{2}:{3}
+  retryCount: 5
+  readSleepTime: 10000
+  writeSleepTime: 10000
+ batchLoadPathMap: 
+  remoteUser: petkaak 
+  remoteHost: tpalde0sva005.ebiz.verizon.com
+  remotePassword: We1c@me6
+  remoteFilePath: /home/petkaak
+=======================================================================
+package com.verizon.connect.svcinv.business.dataservice.util;
+
+import java.io.IOException;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
+import java.text.MessageFormat;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import com.verizon.connect.svcinv.business.dataservice.config.ApplicationPropertiesConfig;
+import com.verizon.connect.svcinv.business.dataservice.config.ApplicationPropertiesConfig.BatchLoadPathMap;
+
+@Component
+@ConditionalOnBean(value = { ApplicationPropertiesConfig.class })
+@DependsOn({ "batchLoadPathMap" })
+public class WriteRemoteFileHandler {
+	
+	@Autowired
+	private ApplicationPropertiesConfig appConfig;
+	
+	@Autowired
+	CmdUtil cmdUtil;
+	
+	@Autowired
+	@Lazy
+	Map<String, BatchLoadPathMap> batchLoadPathMap;
+	
+	public static final String CPY_FILES_REMOTE = "cpyFilesToRemoteFolder";
+	
+	private static final Logger logger = LoggerFactory.getLogger(WriteRemoteFileHandler.class);
+
+	public void filesTransferFromLocalToRemote(String fileName, String key) {
+		writeFileToRemoteServer(fileName,key);
+	}
+	
+	private void writeFileToRemoteServer(String fileName, String key) {
+		boolean isFileCopiedRemotely = false;
+		boolean isFileCopiedToFileSys;
+		
+		String cpyFileSyscmd = MessageFormat.format(appConfig.getFileConfigs().getScpWriteRemoteFileCommand(),
+				fileName, batchLoadPathMap.get(key).getRemoteUser(),
+				batchLoadPathMap.get(key).getRemoteHost(),
+				batchLoadPathMap.get(key).getRemoteFilePath());
+		
+		isFileCopiedToFileSys = copyToRemoteFolder(cpyFileSyscmd);
+		
+		if (!isFileCopiedRemotely) {
+			logger.info("Error in executing scp command or error in writing file to remote server");
+		} else {
+
+			logger.info(
+					"File successfully copied to remote server, proceed to delete the file from K8s  :::::::: key {} ",
+					key);
+			try {
+				Thread.sleep(appConfig.getFileConfigs().getWriteSleepTime());
+			}catch(InterruptedException e){
+				logger.error("InterruptedException exception {}", e);
+				Thread.currentThread().interrupt();
+			}
+			deleteFile(fileName);
+		}}
+	
+	public void deleteFile(String fileName) {
+
+		logger.info(":::::::::: deleteFile ::::::::::::: {}", fileName);
+		if (!StringUtils.isEmpty(fileName)) {
+			try {
+				Files.deleteIfExists(Paths.get(fileName));
+				logger.info("File successfully deleted from K8s  :::::::: fileName {} ", fileName);
+			} catch (NoSuchFileException e) {
+				logger.error("No such file/directory exists :::::: fileName  {} :stack:{} ", fileName, e);
+			} catch (DirectoryNotEmptyException e) {
+				logger.error("Directory is not empty. :::::: fileName  {} :stack:{}", fileName, e);
+			} catch (IOException e) {
+				logger.error("Invalid permissions. :::::: fileName  {} :stack:{}", fileName, e);
+			}
+		}
+	}
+	
+	public boolean copyToRemoteFolder(String cpyRmtcmd){
+		boolean isFileCopied = false;
+		
+		isFileCopied = executeCommand(cpyRmtcmd, false, CPY_FILES_REMOTE);
+
+		return isFileCopied;
+	}
+	
+	public boolean executeCommand(String cmd, boolean result, String flow) {
+	
+		AtomicInteger counter = new AtomicInteger(0);
+		boolean commandResult = false;
+		while (checkRetryCount(counter, commandResult)) {
+			String[] cmdArr = { "bash", "-c", cmd };
+			int returnVal = cmdUtil.runCommand(cmdArr, false);
+			commandResult = returnVal == 0 ? true : false;
+			if (!result) {
+				setThreadToSleep(flow);
+			}
+		}
+
+		return commandResult;
+	}
+	
+	private boolean checkRetryCount(AtomicInteger counter, boolean result) {
+		return (result == false) && (counter.getAndIncrement() < appConfig.getFileConfigs().getRetryCount());
+	}
+	
+	private void setThreadToSleep(String flow) {
+		try {
+			Thread.sleep(appConfig.getFileConfigs().getReadSleepTime());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+
+	}
+}
+=====================================================================
+package com.verizon.connect.svcinv.business.dataservice.util;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CmdUtil {
+
+	private static final Logger logger = LoggerFactory.getLogger(CmdUtil.class);
+	
+	public  int runCommand(String[] cmdArr, boolean isErrorStream) {
+		logger.info("runCommand::begin");
+		logger.info("runCommand::isErrorStream->{}", isErrorStream);
+		int exitVal = 0;
+		try {
+			Process process = Runtime.getRuntime().exec(cmdArr);
+			logger.info("runCommand::after process->{}",process);
+			BufferedReader in = new BufferedReader(
+					new InputStreamReader(!isErrorStream ? process.getInputStream() : process.getErrorStream()));
+			logger.debug("runCommand::after buffer reader->{}",in);
+
+			logger.info("runCommand::before  exitVal->{}",process.waitFor());
+			exitVal = process.waitFor();
+			logger.info("runCommand::exitVal->{}", exitVal);
+			in.close();
+		} catch (IOException|InterruptedException e) {
+			 Thread.currentThread().interrupt();
+		} 
+		
+		logger.info("runCommand::end");
+		return exitVal;
+	}
+}
+================================================================
+package com.verizon.connect.svcinv.business.dataservice.services;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVWriter;
+import com.verizon.connect.svcinv.business.dataservice.config.SftpFileTransfer;
+import com.verizon.connect.svcinv.business.dataservice.dto.ExternalInterfaceResponse;
+import com.verizon.connect.svcinv.business.dataservice.dto.NonTnRawOrderSearchDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.RawData;
+import com.verizon.connect.svcinv.business.dataservice.dto.ServiceInventoryBussinessDto;
+import com.verizon.connect.svcinv.business.dataservice.dto.TnInventoryReportRequest;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseInClauseParams;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseRequestDTO;
+import com.verizon.infrastructure.connect.genericdatabase.dto.GenericDataBaseResponseDTO;
+
+@Service
+public class TnInventoryReportServiceImpl implements TnInventoryReportService {
+
+	private static final Logger log = LoggerFactory.getLogger(TnInventoryReportServiceImpl.class);
+
+	@Value("${spring.svcInvReadGenericUrl}")
+	String svcInvReadUrl;
+
+	@Value("${spring.configReadGenericDbUrl}")
+	String configReadUrl;
+	
+	@Value("${spring.orderReadRawOrderUrl}")
+	String orderReadRawOrderUrl;
+
+	@Autowired
+	private RestTemplate restTemplate;
+	
+	@Autowired
+	SftpFileTransfer fileTransfer;
+
+	private static final String ERROR = "Exception occurred due to";
+
+	@Async("threadPoolTaskExecutor")
+	@Override
+	public void getTnInvReport(ServiceInventoryBussinessDto serviceInventoryBussinessDto) {
+		
+		ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+		List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+		try {
+			String rawData = getRawData(serviceInventoryBussinessDto);
+			TnInventoryReportRequest request = getTnInvReportRequest(rawData);
+		
+		    requestList = generateDbRequest(request,requestList);
+		    
+		    List<GenericDataBaseResponseDTO> responseBody = getAllData(requestList);
+			
+            ExternalInterfaceResponse response = loadApiData();
+			
+			String pathforFileStorage = getPathForFileStorage(response);
+			processDatabaseResponse(responseBody, pathforFileStorage, response);
+			
+
+			log.info("Exited SvcinvBusinessServiceImpl.getTnInvReport(ExternalInterfaceRequest request)");
+			externalInterfaceResponse.setStatusCode("0");
+			externalInterfaceResponse.setStatusDescription("Success");
+		} catch (Exception e) {
+			log.error(ERROR, e);
+		}
+	}
+	
+	public List<GenericDataBaseResponseDTO> getAllData(List<GenericDataBaseRequestDTO> requestList) {
+		HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList,
+				new HttpHeaders());
+		ResponseEntity<List<GenericDataBaseResponseDTO>> genericDataBaseResponseDTORef = restTemplate.exchange(
+				svcInvReadUrl, HttpMethod.POST, requestEntity,
+				new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+				});
+
+		List<GenericDataBaseResponseDTO> responseBody = genericDataBaseResponseDTORef.getBody();
+		return responseBody;
+	}
+	
+	public List<GenericDataBaseRequestDTO> generateDbRequest(TnInventoryReportRequest request, List<GenericDataBaseRequestDTO> requestList) {
+		boolean hasEnterpriseID = isNonEmpty(request.getEnterpriseId());
+		boolean hasLocationId = isNonEmpty(request.getLocationId()) && !request.getLocationId().contains("");
+
+		if (hasEnterpriseID && hasLocationId || hasLocationId) {
+			generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_LOCATION_FOR_CSSOP",
+					request.getLocationId());
+		} else if (hasEnterpriseID) {
+			generateDatabaseRequest(requestList, request, "GET_TN_DETAILS_FOR_CSSOP",
+					Arrays.asList(request.getEnterpriseId()));
+		} else {
+			throw new IllegalArgumentException("Invalid request: EnterpriseID or LocationId must be provided");
+		}
+		return requestList;
+	}
+	
+	public String getRawData(ServiceInventoryBussinessDto serviceInventoryBussinessDto) {
+		NonTnRawOrderSearchDto nonTnRawOrderSearchDto = new NonTnRawOrderSearchDto();
+		nonTnRawOrderSearchDto.setFunctionCode(serviceInventoryBussinessDto.getOrderHeader().getFunctionCode());
+		nonTnRawOrderSearchDto.setLob(serviceInventoryBussinessDto.getOrderHeader().getLineOfBusiness());
+		nonTnRawOrderSearchDto.setOrderNumber(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderNumber());
+		nonTnRawOrderSearchDto.setOrderVersion(serviceInventoryBussinessDto.getOrderHeader().getWorkOrderVersion());
+		nonTnRawOrderSearchDto.setProductType(serviceInventoryBussinessDto.getOrderHeader().getProduct());
+		nonTnRawOrderSearchDto.setSourceSystem(serviceInventoryBussinessDto.getOrderHeader().getOriginatingSystem());
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<Object> httpEntity = new HttpEntity<>(nonTnRawOrderSearchDto,headers);
+		
+		String rawData2 = null;
+		try {
+			ResponseEntity<RawData> rawData = restTemplate.exchange(orderReadRawOrderUrl, HttpMethod.POST,httpEntity, RawData.class);
+			rawData2 = rawData.getBody().getRawData();			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return rawData2;
+	}
+	
+	public TnInventoryReportRequest getTnInvReportRequest(String rawData) {
+		TnInventoryReportRequest request = new TnInventoryReportRequest();
+		
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+	        JsonNode rootNode=null;
+			try {
+				rootNode = objectMapper.readTree(rawData);
+			} catch (JsonMappingException e) {
+				log.error(ERROR, e.getMessage());
+			} catch (JsonProcessingException e) {
+				log.error(ERROR, e.getMessage());
+			}
+							
+			JsonNode serviceOrderHeaderNode = rootNode.path("serviceOrder").path("serviceOrderHeader");
+	        if (!serviceOrderHeaderNode.isMissingNode()) {
+	            request.setTransactionId(serviceOrderHeaderNode.path("workOrderNumber").asText(null));
+	            request.setSource(serviceOrderHeaderNode.path("originatingSystem").asText(null));
+	        }
+
+	        JsonNode specificationArray = rootNode.path("serviceOrder").path("services").path("commonSpecifications").path("specification");
+	        if (specificationArray.isArray()) {
+	            List<String> locationIds = new ArrayList<>();
+	            for (JsonNode spec : specificationArray) {
+	                String code = spec.path("code").asText();
+	                String value = spec.path("value").asText();
+
+	                if ("EnterpriseId".equals(code)) {
+	                    request.setEnterpriseId(value);
+	                } else if ("REQUEST_ID".equals(code)) {
+	                    request.setRequestId(value);
+	                } else if ("locationId".equals(code) && !value.isEmpty()) {
+	                    locationIds.add(value);
+	                }
+	            }
+	            request.setLocationId(locationIds.isEmpty() ? null : locationIds);
+	        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+        return request;
+	}
+	
+	public String getPathForFileStorage(ExternalInterfaceResponse response) {
+		JSONObject jsonVal = new JSONObject(response);
+		JSONArray rawDataArray = jsonVal.getJSONArray("rawBusinessResponse");
+		String pathforFileStorage = rawDataArray.getString(0);
+		return pathforFileStorage;
+	}
+
+	public boolean isNonEmpty(String value) {
+		return value != null && !value.isEmpty();
+	}
+
+	public boolean isNonEmpty(List<String> value) {
+		return value != null && !value.isEmpty();
+	}
+
+	public void generateDatabaseRequest(List<GenericDataBaseRequestDTO> requestList, TnInventoryReportRequest request,
+			String apiName, List<String> values) {
+		GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+		genericDataBaseRequestDTO.setSqlKey(apiName);
+		genericDataBaseRequestDTO.setSourceService(request.getSource());
+
+		String[] columnValues = values.toArray(new String[0]);
+
+		if ("GET_TN_DETAILS_FOR_CSSOP".equals(apiName)) {
+			genericDataBaseRequestDTO.setColumnValues(columnValues);
+		} else {
+			GenericDataBaseInClauseParams clauseParams = new GenericDataBaseInClauseParams();
+			clauseParams.setInParams(columnValues);
+			clauseParams.setKey("location_id");
+			genericDataBaseRequestDTO.setInClauseList(Arrays.asList(clauseParams));
+			genericDataBaseRequestDTO.setColumnValues(new String[1]);
+		}
+
+		requestList.add(genericDataBaseRequestDTO);
+	}
+
+	public void processDatabaseResponse(List<GenericDataBaseResponseDTO> responseBody, String resourceDirectory,
+			 ExternalInterfaceResponse response) {
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			String data = objectMapper.writeValueAsString(responseBody.get(0).getDataList());
+			JsonNode jsonNode = objectMapper.readTree(data);
+			processJson(jsonNode, resourceDirectory, response);
+		} catch (IOException e) {
+			log.error(ERROR, e.getMessage());
+		}
+	}
+
+	public static void processJson(JsonNode jsonNode, String resourceDirectory, ExternalInterfaceResponse response) {
+		Map<String, CSVWriter> csvWriters = new HashMap<>();
+
+		try {
+			JSONObject jsonVal = new JSONObject(response);
+			JSONArray rawDataArray = jsonVal.getJSONArray("rawBusinessResponse");
+			JSONArray headerVal = rawDataArray.getJSONArray(1);
+			String headerColumnValues = headerVal.getString(0);
+			String[] headerValue = headerColumnValues.substring(1, headerColumnValues.length() - 1).split(",");
+
+			processJsonArrayElements(jsonNode, resourceDirectory, headerValue, csvWriters);
+
+		} catch (Exception e) {
+			log.error(ERROR, e.getMessage());
+		} finally {
+			closeCsvWriters(csvWriters);
+		}
+	}
+
+	public static void processJsonArrayElements(JsonNode jsonNode, String resourceDirectory, String[] headerValue,
+			Map<String, CSVWriter> csvWriters) throws IOException {
+		for (JsonNode arrayElement : jsonNode) {
+			String locationId = getLocationId(arrayElement);
+			CSVWriter csvWriter = csvWriters.get(locationId);
+			
+			if(csvWriter == null) {
+				csvWriter = createCsvWriter(resourceDirectory, locationId, headerValue);
+				csvWriters.put(locationId, csvWriter);
+			}
+			processArrayElement(arrayElement, csvWriter);
+		}
+	}
+
+	public static void closeCsvWriters(Map<String, CSVWriter> csvWriters) {
+		for (CSVWriter writer : csvWriters.values()) {
+			try {
+				writer.close();
+			} catch (IOException e) {
+				log.error(ERROR, e.getMessage());
+			}
+		}
+	}
+
+	public static String getLocationId(JsonNode arrayElement) {
+		for (JsonNode element : arrayElement) {
+			if ("location_id".equals(element.get("columnName").asText())) {
+				return element.get("columnValue").asText();
+			}
+		}
+		return null;
+	}
+
+	public static CSVWriter createCsvWriter(String resourceDirectory, String locationId, String[] headerValue)
+			throws IOException {
+		Path outputPath = getOutputPath(resourceDirectory, locationId);
+		CSVWriter csvWriter = new CSVWriter(new FileWriter(outputPath.toFile(), true));
+		boolean isNewFile = isFileEmpty(outputPath);
+		if (isNewFile) {
+			csvWriter.writeNext(headerValue);
+		}
+		return csvWriter;
+	}
+
+	public static Path getOutputPath(String resourceDirectory, String locationId) {
+		LocalDateTime now = LocalDateTime.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+		String timestamp = now.format(formatter);
+		String fileName = locationId + "_" + timestamp + ".csv";
+		return Paths.get(resourceDirectory, fileName);
+	}
+
+	public static boolean isFileEmpty(Path path) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+			String firstLine = reader.readLine();
+			return firstLine == null;
+		}
+	}
+
+	public static void processArrayElement(JsonNode arrayElement, CSVWriter csvWriter) {
+		String[] row = new String[11];
+		for (JsonNode element : arrayElement) {
+			String columnName = element.get("columnName").asText();
+			String columnValue = element.get("columnValue").asText();
+			switch (columnName) {
+			case "rn":
+				row[0] = columnValue;
+				break;
+			case "entity_name":
+				row[1] = columnValue;
+				break;
+			case "location_id":
+				row[2] = columnValue;
+				break;
+			case "location_type":
+				row[3] = columnValue;
+				break;
+			case "tn":
+				row[4] = columnValue;
+				break;
+			case "tn_status":
+				row[5] = columnValue;
+				break;
+			case "calling_line_id_first_name":
+				row[6] = columnValue;
+				break;
+			case "calling_line_id_last_name":
+				row[7] = columnValue;
+				break;
+			case "type":
+				row[8] = columnValue;
+				break;
+			case "resourcetype":
+				row[9] = columnValue;
+				break;
+			case "porting_code":
+				row[10] = columnValue;
+				break;
+			default:
+				log.warn("Unexpected Column Name: " + columnName);
+				break;
+			}
+		}
+		csvWriter.writeNext(row);
+	}
+
+	public ExternalInterfaceResponse loadApiData() {
+		log.info("<<<<<<------ Entered ExternalInterfaceResponse loadApiData() ------>>>>>>");
+
+		ExternalInterfaceResponse externalInterfaceResponse = new ExternalInterfaceResponse();
+		GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+		List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+
+		genericDataBaseRequestDTO.setSqlKey("GET_CSSOP_API_CONFIG");
+		genericDataBaseRequestDTO.setSourceService("INFRA-INTERFACE-SERVICE");
+
+		genericDataBaseRequestDTO.setColumnValues(new Object[] { "GET_TN_DETAILS_FOR_CSSOP" });
+		requestList.add(genericDataBaseRequestDTO);
+
+		HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList, new HttpHeaders());
+		ResponseEntity<List<GenericDataBaseResponseDTO>> genericDbResponse = restTemplate.exchange(configReadUrl,
+				HttpMethod.POST, requestEntity, new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+				});
+
+		try {
+			if (genericDbResponse.getBody() != null && !genericDbResponse.getBody().get(0).getDataList().isEmpty()) {
+				String value1 = genericDbResponse.getBody().get(0).getDataList().get(0).get(0).getColumnValue();
+				JSONObject jsonVal = new JSONObject(value1);
+
+				String resourceDirectory = jsonVal.getString("resourceDirectory");
+				String[] headers = { jsonVal.getString("header") };
+				externalInterfaceResponse.setRawBusinessResponse(Arrays.asList(resourceDirectory, headers));
+			}
+		} catch (Exception e) {
+			log.error(ERROR, e.getMessage());
+		}
+
+		log.info("<<<<<<------ Exited ExternalInterfaceResponse loadApiData() ------>>>>>>"
+				+ externalInterfaceResponse.getRawBusinessResponse());
+		return externalInterfaceResponse;
+	}
+}
