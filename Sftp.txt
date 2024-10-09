@@ -1,4 +1,132 @@
 
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.SftpException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+
+@ExtendWith(MockitoExtension.class)
+public class CsvFileTransferServiceTest {
+
+    @Mock
+    private SftpClient sftpClient;  // Mock the SftpClient
+
+    @InjectMocks
+    private CsvFileTransferService csvFileTransferService;  // Inject the mock
+
+    private String mockTempDir;
+
+    @BeforeEach
+    public void setUp() {
+        // Mock values for the directory and remote host properties
+        mockTempDir = System.getProperty("java.io.tmpdir") + "csv_reports_test_";
+
+        // Use ReflectionTestUtils to inject the mock values for fields
+        ReflectionTestUtils.setField(csvFileTransferService, "localTempDir", mockTempDir);
+        ReflectionTestUtils.setField(csvFileTransferService, "host", "mockHost");
+        ReflectionTestUtils.setField(csvFileTransferService, "username", "mockUser");
+    }
+
+    @Test
+    public void testTransferCsvFiles_NoCsvFiles() {
+        // Scenario: No CSV files in the directory
+        File mockDir = mock(File.class);
+        when(mockDir.listFiles(any())).thenReturn(null);
+
+        // Ensure no interactions with the SFTP client
+        csvFileTransferService.transferCsvFiles();
+        verify(sftpClient, never()).uploadFile(anyString(), anyString());
+        verify(sftpClient, never()).close();
+    }
+
+    @Test
+    public void testTransferCsvFiles_WithCsvFiles() throws Exception {
+        // Scenario: CSV files are present in the directory
+        File mockDir = mock(File.class);
+        File mockFile1 = mock(File.class);
+        File mockFile2 = mock(File.class);
+
+        when(mockFile1.getName()).thenReturn("file1.csv");
+        when(mockFile2.getName()).thenReturn("file2.csv");
+
+        when(mockDir.listFiles(any())).thenReturn(new File[]{mockFile1, mockFile2});
+
+        // Set up authentication and upload interactions
+        doNothing().when(sftpClient).authPassword(anyString(), anyString());
+        doNothing().when(sftpClient).uploadFile(anyString(), anyString());
+        doNothing().when(sftpClient).close();
+
+        csvFileTransferService.transferCsvFiles();
+
+        verify(sftpClient, times(1)).authPassword(anyString(), eq("sftp"));
+        verify(sftpClient, times(1)).uploadFile(mockTempDir, "file1.csv");
+        verify(sftpClient, times(1)).uploadFile(mockTempDir, "file2.csv");
+        verify(sftpClient, times(1)).close();
+    }
+
+    @Test
+    public void testTransferCsvFiles_FileNotFoundException() throws Exception {
+        // Scenario: FileNotFoundException is thrown
+        File mockDir = mock(File.class);
+        File mockFile = mock(File.class);
+
+        when(mockDir.listFiles(any())).thenReturn(new File[]{mockFile});
+        when(mockFile.getName()).thenReturn("file1.csv");
+
+        // Throw FileNotFoundException
+        doThrow(new FileNotFoundException("File not found")).when(sftpClient).uploadFile(anyString(), anyString());
+
+        csvFileTransferService.transferCsvFiles();
+
+        verify(sftpClient, times(1)).authPassword(anyString(), eq("sftp"));
+        verify(sftpClient, times(1)).uploadFile(anyString(), anyString());
+        verify(sftpClient, times(1)).close();
+    }
+
+    @Test
+    public void testTransferCsvFiles_JSchException() throws Exception {
+        // Scenario: JSchException is thrown
+        doThrow(new JSchException("Mock JSch exception")).when(sftpClient).authPassword(anyString(), anyString());
+
+        csvFileTransferService.transferCsvFiles();
+
+        verify(sftpClient, times(1)).authPassword(anyString(), eq("sftp"));
+        verify(sftpClient, never()).uploadFile(anyString(), anyString());
+        verify(sftpClient, times(1)).close();
+    }
+
+    @Test
+    public void testTransferCsvFiles_SftpException() throws Exception {
+        // Scenario: SftpException is thrown during upload
+        File mockDir = mock(File.class);
+        File mockFile = mock(File.class);
+
+        when(mockDir.listFiles(any())).thenReturn(new File[]{mockFile});
+        when(mockFile.getName()).thenReturn("file1.csv");
+
+        doNothing().when(sftpClient).authPassword(anyString(), anyString());
+        doThrow(new SftpException(0, "Mock SFTP exception")).when(sftpClient).uploadFile(anyString(), anyString());
+
+        csvFileTransferService.transferCsvFiles();
+
+        verify(sftpClient, times(1)).authPassword(anyString(), eq("sftp"));
+        verify(sftpClient, times(1)).uploadFile(anyString(), anyString());
+        verify(sftpClient, times(1)).close();
+    }
+}
+
+=======================================================================
 package com.verizon.connect.activation.ssh.service;
 
 import java.io.File;
