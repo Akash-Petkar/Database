@@ -1,3 +1,69 @@
+
+package com.verizon.connect.activation.ssh.service;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.SftpException;
+import com.verizon.connect.activation.ssh.util.SftpClient;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Component
+public class CsvFileTransferService {
+
+	@Value("${spring.host}")
+	String host;
+	
+	@Value("${spring.username}")
+	String username;
+	
+	@Value("${spring.remoteFilePath}")
+	String remoteFilePath;
+
+	@Autowired
+	private SftpClient sftpClient;
+	
+	private String localTempDir = System.getProperty("java.io.tmpdir") + "csv_reports_";
+	
+	public void transferCsvFiles() {
+		try {
+			sftpClient = new SftpClient(host, username);
+			sftpClient.authPassword(null, "sftp");
+			
+			File tempDir = new File(localTempDir);
+			File[] csvFiles = tempDir.listFiles((dir,name) -> name.endsWith(".csv"));
+			
+			if(Objects.nonNull(csvFiles) && csvFiles.length > 0) {
+				for(File csvFile : csvFiles) {
+					String fileName = csvFile.getName();
+					log.info("Uploading file: "+ fileName);
+					
+					sftpClient.uploadFile(localTempDir, fileName);
+				}
+			}else {
+				log.info("No CSV files found in the temporary directory");
+			}
+			
+			sftpClient.close();
+		} catch(FileNotFoundException e) {
+			log.error("File not found: ", e);
+		}
+		catch (JSchException | SftpException e) {
+			log.error("Error occurred while transferring CSV files via SFTP", e);
+		}
+	}
+}
+
+
+========================================================
 @Component
 @NoArgsConstructor
 @Slf4j
