@@ -1,3 +1,47 @@
+public TnInventoryReportRequest getTnInvReportRequest(String rawData) {
+		TnInventoryReportRequest request = new TnInventoryReportRequest();
+		
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+	        JsonNode rootNode=null;
+			try {
+				rootNode = objectMapper.readTree(rawData);
+			} catch (JsonMappingException e) {
+				log.error(ERROR, e.getMessage());
+			} catch (JsonProcessingException e) {
+				log.error(ERROR, e.getMessage());
+			}
+							
+			JsonNode serviceOrderHeaderNode = rootNode.path("serviceOrder").path("serviceOrderHeader");
+	        if (!serviceOrderHeaderNode.isMissingNode()) {
+	            request.setTransactionId(serviceOrderHeaderNode.path("workOrderNumber").asText(null));
+	            request.setSource(serviceOrderHeaderNode.path("originatingSystem").asText(null));
+	        }
+
+	        JsonNode specificationArray = rootNode.path("serviceOrder").path("services").path("commonSpecifications").path("specification");
+	        if (specificationArray.isArray()) {
+	            List<String> locationIds = new ArrayList<>();
+	            for (JsonNode spec : specificationArray) {
+	                String code = spec.path("code").asText();
+	                String value = spec.path("value").asText();
+
+	                if ("EnterpriseId".equals(code)) {
+	                    request.setEnterpriseId(value);
+	                } else if ("REQUEST_ID".equals(code)) {
+	                    request.setRequestId(value);
+	                } else if ("locationId".equals(code) && !value.isEmpty()) {
+	                    locationIds.add(value);
+	                }
+	            }
+	            request.setLocationId(locationIds.isEmpty() ? null : locationIds);
+	        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+        return request;
+	}
+==============================================================
 public String getRawData(ServiceInventoryBussinessDto serviceInventoryBussinessDto) {
 		NonTnRawOrderSearchDto nonTnRawOrderSearchDto = new NonTnRawOrderSearchDto();
 		nonTnRawOrderSearchDto.setFunctionCode(serviceInventoryBussinessDto.getOrderHeader().getFunctionCode());
