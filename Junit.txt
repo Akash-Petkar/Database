@@ -1,3 +1,265 @@
+else if("CSSOP".equals( upstreamOrder.getOrderHeader().getOriginatingSystem())) {
+			
+		}
+
+Above is the condition i added but i want to add two more conditions in else if block 
+In upstreamOrder object i have field rawOrderData which contains String value of Json format 
+Below is the String value present in rawOrderData
+{
+	"serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-NON-TSO",
+			"supp": false,
+			"suppField": false,
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Integrated Access",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "MCP_14_OCT_01",
+			"workOrderVersion": "0",
+			"originatingSystem": "CSSOP",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+		"services": {
+			"commonSpecifications": {
+				"specification": [
+					{
+						"code": "API_NAME",
+						"value": "modifyCallingPlan"
+					},
+					{
+						"code": "REQUEST_ID",
+						"value": "259eb923-d3a7-48ae-95e5-236566a11e56"
+					},
+					{
+						"code": "SummaryContextID",
+						"value": ""
+					}
+				]
+			},
+			"convergedService": {
+				"serviceCapability": [
+					{
+						"entityType": "LOCATION",
+						"actionCode": "CHANGE",
+						"entityTypeId": "0",
+						"specification": [
+							{
+								"code": "createdBy",
+								"value": "1443950427"
+							},
+							{
+								"code": "createdDate",
+								"value": "2023-08-31T07:10:47.667Z"
+							},
+							{
+								"code": "updatedBy",
+								"value": "1443950427"
+							},
+							{
+								"code": "updatedDate",
+								"value": "2023-08-31T07:10:47.667Z"
+							},
+							{
+								"code": "departmentId",
+								"value": ""
+							},
+							{
+								"code": "locationId",
+								"value": "631774"
+							},
+							{
+								"code": "callingPlanId",
+								"value": "1075777"
+							},
+							{
+								"code": "callingPlanName",
+								"value": "LOC94777634_CallingPlan"
+							},
+							{
+								"code": "iIntraLocation",
+								"value": "1"
+							},
+							{
+								"code": "iInterLocation",
+								"value": "0"
+							},
+							{
+								"code": "iCollectCalls",
+								"value": "1"
+							},
+							{
+								"code": "oIntraLocation",
+								"value": "0"
+							},
+							{
+								"code": "oLocal",
+								"value": "1"
+							},
+							{
+								"code": "oTollFree",
+								"value": "1"
+							},
+							{
+								"code": "oToll",
+								"value": "0"
+							},
+							{
+								"code": "oInternational",
+								"value": "1"
+							},
+							{
+								"code": "oCasual",
+								"value": "0"
+							},
+							{
+								"code": "oOperatorAssisted",
+								"value": "1"
+							},
+							{
+								"code": "oChargedDirAssist",
+								"value": "1"
+							},
+							{
+								"code": "oSplServices1",
+								"value": "0"
+							},
+							{
+								"code": "oSplServices2",
+								"value": "1"
+							},
+							{
+								"code": "oPrmServices1",
+								"value": "0"
+							},
+							{
+								"code": "oPrmServices2",
+								"value": "0"
+							},
+							{
+								"code": "oUrlDialing",
+								"value": "3"
+							},
+							{
+								"code": "oUnknown",
+								"value": "1"
+							},
+							{
+								"code": "fIntraLocation",
+								"value": "0"
+							},
+							{
+								"code": "fLocal",
+								"value": "1"
+							},
+							{
+								"code": "fTollFree",
+								"value": "1"
+							},
+							{
+								"code": "fToll",
+								"value": "1"
+							},
+							{
+								"code": "fInternational",
+								"value": "1"
+							},
+							{
+								"code": "fCasual",
+								"value": "0"
+							},
+							{
+								"code": "fOperatorAssisted",
+								"value": "1"
+							},
+							{
+								"code": "fChargedDirAssist",
+								"value": "1"
+							},
+							{
+								"code": "fSplServices1",
+								"value": "0"
+							},
+							{
+								"code": "fSplServices2",
+								"value": "1"
+							},
+							{
+								"code": "fPrmServices1",
+								"value": "1"
+							},
+							{
+								"code": "fPrmServices2",
+								"value": "0"
+							},
+							{
+								"code": "fUrlDialing",
+								"value": "1"
+							},
+							{
+								"code": "fUnknown",
+								"value": "0"
+							},
+							{
+								"code": "bInterLocation",
+								"value": "1"
+							},
+							{
+								"code": "active",
+								"value": "1"
+							},
+							{
+								"code": "tn1",
+								"value": "50012725382"
+							},
+							{
+								"code": "tn2",
+								"value": "50025427181"
+							},
+							{
+								"code": "tn3",
+								"value": "50032536276"
+							},
+							{
+								"code": "idigitString",
+								"value": ""
+							},
+							{
+								"code": "odigitString",
+								"value": ""
+							},
+							{
+								"code": "fdigitString",
+								"value": ""
+							},
+							{
+								"code": "bdigitString",
+								"value": ""
+							},
+							{
+								"code": "digitString",
+								"value": ""
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+}
+
+Now i want to fetch value of "flow": "VRD-NON-TSO" and {
+						"code": "API_NAME",
+						"value": "modifyCallingPlan"
+					}
+And want to add these conditionds in else if block 
+=============================================================
 public TnInventoryReportRequest getTnInvReportRequest(String rawData) {
 		TnInventoryReportRequest request = new TnInventoryReportRequest();
 		
