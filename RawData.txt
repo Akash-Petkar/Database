@@ -1,3 +1,38 @@
+List<String> multipleNamesOfEnterpriseId=Arrays.asList("EnterpriseId","enterpriseId","ENTERPRISE_ID","CUSTOMER_ID");
+            for(String enterpriseIdName:multipleNamesOfEnterpriseId) {
+            String jpath="$.serviceOrder.services.commonSpecifications.specification[?(@.code==\""+enterpriseIdName+"\")].value";	
+			jpathValue = genericTranslationCoreEngine.getValueFromJPath(jpath,jsonContext);	
+
+public Object getValueFromJPath(@NotNull String jpath, DocumentContext jsonContext) {
+		LOG.debug("Entered getValueFromJPath"); //san debug
+		Object jpathValue = null;
+		try {
+		    
+			jpathValue = jsonContext.read(jpath);
+			if (jpathValue instanceof JSONArray) {
+				LOG.debug("Inside setFieldValue assigneeObject instanceof JSONArray"); //san debug
+				if (CollectionUtils.isEmpty((JSONArray) jpathValue)) {
+					return null;
+				}
+				for (Object obj : (JSONArray) jpathValue) {
+					jpathValue = obj;
+				}
+			}
+			
+		} catch (Exception e) {
+			LOG.debug("jpath --> {} Not in JSON Payload.", jpath, e); //san debug
+		}
+		LOG.debug("Exited getValueFromJPath For jpath --> {}, Value is --> {}", jpath, jpathValue); //san debug
+		return jpathValue;
+	}
+
+
+Above are methods in which we are giving jpath value to extract that specCode value
+Now below is my json data 
+I want to extract locationId value present under convergedService/serviceCapability/specification 
+
+Can you give me correct jpath value i can use so that it will return locationId value ?
+=================================================
 {
 	"serviceOrder": {
 		"serviceOrderHeader": {
