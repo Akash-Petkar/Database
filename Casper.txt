@@ -1,0 +1,70 @@
+{
+  "orderNumber" : "1002",
+  "enterpriseId" : null,
+  "locationId" : null,
+  "statusCode" : null,
+  "statusDescription" : "Records Inserted/Updated Successfully",
+  "status" : "Success",
+  "failureEntityDetails" : null,
+  "subId" : null
+}
+=====================================
+<#-- @ftlvariable name="JsonUtil" type="com.verizon.connect.infra.transform.util.JsonUtil" -->
+<#assign body = JsonUtil.jsonToMap(input)>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+   <soapenv:Body>
+			<#if body.orderNumber??>
+			 	<#assign transaction_id = body.orderNumber>
+				<ns1:TransactionId xsi:type="xsd:string">${transaction_id}</ns1:TransactionId>
+            <#else>
+				<ns1:TransactionId xsi:type="xsd:string" xsi:nil="0"/>
+            </#if>
+            <#if body.failureEntityDetails?? && body.failureEntityDetails.CASPER_SLGTGN??>
+                <#assign casperTrunkRoutingList = body.failureEntityDetails.CASPER_SLGTGN>
+                    <#list casperTrunkRoutingList as routingList>
+                        <#if routingList.failureParamDetails??>
+                            <#assign casperTrunkErrorsList = routingList.failureParamDetails>
+                            <ns1:errors xsi:type="soapenc:Array" soapenc:arrayType="ns3:ErrorParameter[1]" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns3="urn:ErrorParameter">
+                                <#list casperTrunkErrorsList as rangeList>
+                                    <item>
+                                          <code xsi:type="xsd:int">${rangeList.code}</code>
+                                          <parameter xsi:type="xsd:string">${rangeList.paramName}</parameter>
+										  <parameter xsi:type="xsd:string">${rangeList.paramValue}</parameter>
+                                          <text xsi:type="xsd:string">${rangeList.description}</text>
+                                    </item>
+                                </#list>
+                            </ns1:errors>
+                            <ns1:status xsi:type="xsd:string">Failure</ns1:status>
+                        </#if>
+                    </#list>
+                <#else>
+                <ns1:errors xsi:type="soapenc:Array" xsi:nil="true" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"/>
+                <ns1:status xsi:type="xsd:string">${body.status}</ns1:status>
+            </#if>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+================================================
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzvoip.verizon.com">
+   <env:Body>
+      <ns0:CasperSLGTGNResponse>
+         <TransactionId>1002</TransactionId>
+         <Status>Failure</Status>
+         <ErrorResponse>
+            <Field>SLGTGN</Field>
+            <ErrorDetails>
+               <code>106</code>
+               <text>SLGTGN does not exist</text>
+            </ErrorDetails>
+         </ErrorResponse>
+      </ns0:CasperSLGTGNResponse>
+   </env:Body>
+</env:Envelope>
+=======================================================================
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <soapenv:Body>
+    <ns1:TransactionId xsi:type="xsd:string">1002</ns1:TransactionId>
+    <ns1:errors xsi:type="soapenc:Array" xsi:nil="true" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"/>
+    <ns1:status xsi:type="xsd:string">Success</ns1:status>
+  </soapenv:Body>
+</soapenv:Envelope>
