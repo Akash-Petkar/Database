@@ -1,3 +1,39 @@
+<#-- @ftlvariable name="JsonUtil" type="com.verizon.connect.infra.transform.util.JsonUtil" -->
+<#assign body = JsonUtil.jsonToMap(input)>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+   <soapenv:Body>
+      <#if body.statusDescription == "Records Inserted/Updated Successfully">
+          <ns1:TransactionId xsi:type="xsd:string">${body.orderNumber}</ns1:TransactionId>
+          <ns1:errors xsi:type="soapenc:Array" xsi:nil="true" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"/>
+          <ns1:status xsi:type="xsd:string">${body.status}</ns1:status>
+
+      <#elseif body.statusDescription == "Failure while insert/update operation">
+          <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzvoip.verizon.com">
+             <env:Body>
+                <ns0:CasperSLGTGNResponse>
+                   <TransactionId>${body.orderNumber}</TransactionId>
+                   <Status>Failure</Status>
+                   <ErrorResponse>
+                      <Field>SLGTGN</Field>
+                      <ErrorDetails>
+                         <code>106</code>
+                         <text>SLGTGN does not exist</text>
+                      </ErrorDetails>
+                   </ErrorResponse>
+                </ns0:CasperSLGTGNResponse>
+             </env:Body>
+          </env:Envelope>
+
+      <#else>
+          <ns1:TransactionId xsi:type="xsd:string">${body.orderNumber?default("null")}</ns1:TransactionId>
+          <ns1:errors xsi:type="soapenc:Array" xsi:nil="true" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"/>
+          <ns1:status xsi:type="xsd:string">${body.status}</ns1:status>
+      </#if>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+====================================================================
 List<String> multipleNamesOfEnterpriseId=Arrays.asList("EnterpriseId","enterpriseId","ENTERPRISE_ID","CUSTOMER_ID");
             for(String enterpriseIdName:multipleNamesOfEnterpriseId) {
             String jpath="$.serviceOrder.services.commonSpecifications.specification[?(@.code==\""+enterpriseIdName+"\")].value";	
