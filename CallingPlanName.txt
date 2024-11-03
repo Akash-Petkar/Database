@@ -1,3 +1,58 @@
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class JsonDataExtractor {
+    public static void main(String[] args) {
+        String jsonData = "<YOUR_JSON_STRING_HERE>";  // Replace with your JSON data string.
+
+        JSONObject jsonObject = new JSONObject(jsonData);
+        
+        // Fetching API_NAME
+        String apiName = null;
+        JSONArray specifications = jsonObject.getJSONObject("serviceOrder")
+                                            .getJSONObject("services")
+                                            .getJSONObject("commonSpecifications")
+                                            .getJSONArray("specification");
+
+        for (int i = 0; i < specifications.length(); i++) {
+            JSONObject spec = specifications.getJSONObject(i);
+            if ("API_NAME".equals(spec.getString("code"))) {
+                apiName = spec.getString("value");
+                break;
+            }
+        }
+
+        // Fetching SourceSystem
+        String sourceSystem = jsonObject.getJSONObject("serviceOrder")
+                                        .getJSONObject("serviceOrderHeader")
+                                        .getString("originatingSystem");
+
+        // Fetching locationId
+        String locationId = null;
+        JSONArray serviceCapabilities = jsonObject.getJSONObject("serviceOrder")
+                                                  .getJSONObject("services")
+                                                  .getJSONObject("convergedService")
+                                                  .getJSONArray("serviceCapability");
+
+        for (int i = 0; i < serviceCapabilities.length(); i++) {
+            JSONArray serviceSpecifications = serviceCapabilities.getJSONObject(i).getJSONArray("specification");
+            for (int j = 0; j < serviceSpecifications.length(); j++) {
+                JSONObject spec = serviceSpecifications.getJSONObject(j);
+                if ("locationId".equals(spec.getString("code"))) {
+                    locationId = spec.getString("value");
+                    break;
+                }
+            }
+        }
+
+        // Print the extracted values
+        System.out.println("API Name: " + apiName);
+        System.out.println("Source System: " + sourceSystem);
+        System.out.println("Location ID: " + locationId);
+    }
+}
+
+=========================================================================
 {
 	"serviceOrder": {
 		"serviceOrderHeader": {
