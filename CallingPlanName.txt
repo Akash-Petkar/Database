@@ -1,3 +1,34 @@
+public String setCallingPlanNameForLocation(String callingPlanName,String jsonData) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			JsonNode rootNode = mapper.readTree(jsonData);
+			
+			JsonNode specificationArray = rootNode.path("serviceOrder")
+			        .path("services")
+			        .path("convergedService")
+			        .path("serviceCapability")
+			        .get(0)
+			        .path("specification");
+			
+			if(specificationArray.isArray()) {
+				ArrayNode specsArrayNode = (ArrayNode) specificationArray;
+				
+             for(JsonNode specNode:specsArrayNode) {
+            	 if(specNode.path("code").asText().equals("callingPlanName")) {
+            		 ((ObjectNode) specNode).put("value", callingPlanName);
+            		 break;
+            	 }
+             }								
+			}
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		
+    	return jsonData;
+	}
+=====================================================================
 import org.json.JSONArray;
 import org.json.JSONObject;
 
