@@ -1,3 +1,135 @@
+public boolean checkModifyCallingPlan(String jsonData) {
+		 JSONObject jsonObject = new JSONObject(jsonData);
+	        
+	        String apiName = null;
+	        JSONArray specifications = jsonObject.getJSONObject("serviceOrder")
+	                                            .getJSONObject("services")
+	                                            .getJSONObject("commonSpecifications")
+	                                            .getJSONArray("specification");
+
+	        for (int i = 0; i < specifications.length(); i++) {
+	            JSONObject spec = specifications.getJSONObject(i);
+	            if ("API_NAME".equals(spec.getString("code"))) {
+	                apiName = spec.getString("value");
+	                break;
+	            }
+	        }
+
+	        String sourceSystem = jsonObject.getJSONObject("serviceOrder")
+	                                        .getJSONObject("serviceOrderHeader")
+	                                        .getString("originatingSystem");
+	        
+        if("modifyCallingPlan".equals(apiName) && "CSSOP".equals(sourceSystem)) {
+		return true;}
+        else {
+        	return false;
+        }
+	}
+	
+	public String setCallingPlanName(String jsonData) {
+		String columnValue=null;
+		JSONObject jsonObject = new JSONObject(jsonData);
+		String locationId = null;
+        JSONArray serviceCapabilities = jsonObject.getJSONObject("serviceOrder")
+                                                  .getJSONObject("services")
+                                                  .getJSONObject("convergedService")
+                                                  .getJSONArray("serviceCapability");
+
+        for (int i = 0; i < serviceCapabilities.length(); i++) {
+            JSONArray serviceSpecifications = serviceCapabilities.getJSONObject(i).getJSONArray("specification");
+            for (int j = 0; j < serviceSpecifications.length(); j++) {
+                JSONObject spec = serviceSpecifications.getJSONObject(j);
+                if ("locationId".equals(spec.getString("code"))) {
+                    locationId = spec.getString("value");
+                    break;
+                }
+            }
+        }
+        
+        String callingPlanName = getCallingPlanName(locationId,columnValue);
+        String jsonData1 = setCallingPlanNameForLocation(callingPlanName,jsonData);
+        return jsonData1;
+	}
+	
+	public String getCallingPlanName(String locationId,String columnValue) {
+		List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+		GenericDataBaseRequestDTO genericDataBaseRequestDTO = new GenericDataBaseRequestDTO();
+		genericDataBaseRequestDTO.setSqlKey("GET_CALLING_PLAN_NAME_FOR_CSSOP");
+		genericDataBaseRequestDTO.setSourceService("CSSOP");
+		
+		List<String> values = new ArrayList<>();
+		values.add(locationId);
+		
+		String[] columnValues = values.toArray(new String[0]);
+		genericDataBaseRequestDTO.setColumnValues(columnValues);
+		
+		requestList.add(genericDataBaseRequestDTO);
+		
+		List<GenericDataBaseResponseDTO> responseBody =getData(requestList);
+		
+		for(GenericDataBaseResponseDTO response:responseBody) {
+			List<List<GenericTableData>> dataList = response.getDataList();
+			for(List<GenericTableData> responseList:dataList) {
+				for(GenericTableData finalResponse:responseList) {
+					if("CALLING_PLAN_NAME".equals(finalResponse.getColumnName())) {
+						columnValue = finalResponse.getColumnValue();
+					}
+				}
+			}
+		}		
+		return columnValue;
+	}
+	
+	public List<GenericDataBaseResponseDTO> getData(List<GenericDataBaseRequestDTO> requestList){
+		List<GenericDataBaseResponseDTO> responseBody = null;
+		try {
+			HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList,
+					new HttpHeaders());
+			ResponseEntity<List<GenericDataBaseResponseDTO>> genericDataBaseResponseDTORef = restTemplate.exchange(
+					svcInvReadUrl, HttpMethod.POST, requestEntity,
+					new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {
+					});
+
+			responseBody = genericDataBaseResponseDTORef.getBody();
+		} catch (Exception e) {
+			LOG.error(ERROR, e.getMessage());
+		}
+		
+		return responseBody;
+	}
+	
+	public String setCallingPlanNameForLocation(String callingPlanName,String jsonData) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			JsonNode rootNode = mapper.readTree(jsonData);
+			
+			JsonNode specificationArray = rootNode.path("serviceOrder")
+			        .path("services")
+			        .path("convergedService")
+			        .path("serviceCapability")
+			        .get(0)
+			        .path("specification");
+			
+			if(specificationArray.isArray()) {
+				ArrayNode specsArrayNode = (ArrayNode) specificationArray;
+				
+             for(JsonNode specNode:specsArrayNode) {
+            	 if(specNode.path("code").asText().equals("callingPlanName")) {
+            		 ((ObjectNode) specNode).put("value", callingPlanName);
+            		 break;
+            	 }
+             }								
+			}
+			return mapper.writeValueAsString(rootNode);
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		
+    	return jsonData;
+	}
+===============================================================================================================
 public String setCallingPlanNameForLocation(String callingPlanName,String jsonData) {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
