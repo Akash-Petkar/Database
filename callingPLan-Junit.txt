@@ -1,0 +1,232 @@
+public void addAdditionalCustomSbcFields(List<OrderDetailSpec> entityOrderDetailsSpec,
+				GenericSpecifications additionalAttributes, Entity entity, UpstreamOrder upstreamOrder, OrderEntityOrder entityOrder, OrderOrderHeader orderHeader, List<OrderEntityOrder> entityOrders) {
+	
+			LOG.info("Entered addAdditionalCustomLocationFields");
+	boolean checkEmeaIasa= "PC_IASA".equalsIgnoreCase(upstreamOrder.getOrderHeader().getOriginatingSystem())&& "EMEA".equalsIgnoreCase(upstreamOrder.getOrderHeader().getRegion()) && !OrdngTranslationServiceConstants.Non_RIV.equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow());
+			try {
+				Field field = genericTranslationCoreEngine.getFieldFromClassAndProperty(OrderEntityOrder.class,OrdngTranslationServiceConstants.ENTITY_ORDER_DETAILS_FIELD);
+				OrderDetailSpec regClientSbc = null;
+				String custVpnId = null;
+				TEntitySpecMapping tEntitySpecMappingIn = new TEntitySpecMapping();
+				tEntitySpecMappingIn.setFieldName(genericTranslationCoreEngine.getKeyForField(field));
+				tEntitySpecMappingIn.setEntityName(entity.toString());
+				tEntitySpecMappingIn.setFlow(upstreamOrder.getOrderHeader().getFlow());
+				boolean isItPCIASAOriginatedOrder= "PC_IASA".equalsIgnoreCase(upstreamOrder.getOrderHeader().getOriginatingSystem());
+				List<List<GenericTableData>> rawDataList =null;
+				OrderDetailSpec childEntitesForDevice = customTranslationPbxTnOrderUtil.getEntitySpecListForChildSpec(entityOrders,"DEVICE");
+				String entityOrderDetailId = null;
+				if(customTranslationSbcOrderUtilSupport.checkPCIasaNonRivNotChange(upstreamOrder)){
+					String url = orderGetEntity + "/" + upstreamOrder.getOrderHeader().getWorkOrderNumber() + "/" + upstreamOrder.getOrderHeader().getWorkOrderVersion();
+					Order order = (Order) restClient.invokeService(null, url, null, null, Order.class, HttpMethod.GET);
+					setEntiyNameForSbc(entityOrderDetailsSpec, field, additionalAttributes, entityOrder, order.getEntityOrder());
+					childEntitesForDevice = setCustomOrderDetailsSpecForSbcDevice(entityOrderDetailsSpec, additionalAttributes, order,upstreamOrder);
+					customTranslationSbcOrderUtilSupport.addEntityReferenceChildLocation(entityOrderDetailsSpec,entityOrder);
+					customTranslationLocationInstallOrderUtil.setProxyClusterForSbc(childEntitesForDevice.getOrderDetailSpec(),additionalAttributes,upstreamOrder);
+					entityOrderDetailId = order.getEntityOrder().stream().filter(entityOrder1 -> OrdngTranslationServiceConstants.DEVICE.equalsIgnoreCase(entityOrder1.getEntityTypeName())).flatMap(entityOrder1 -> entityOrder1.getEntityOrderDetails().stream()).map(OrderEntityOrderDetails::getEntityOrderDetailId).map(String::valueOf).findFirst().orElse(null);
+				}
+				if(isItPCIASAOriginatedOrder && OrdngTranslationServiceConstants.Non_RIV.equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow()) && Arrays.asList("CANCEL","DISCONNECT","CHANGE").contains(upstreamOrder.getOrderHeader().getOrderType())){
+					customTranslationSbcOrderUtilSupport.setSipDomainForSvcInv(entityOrderDetailsSpec,additionalAttributes);
+				}
+				if(isItPCIASAOriginatedOrder && OrdngTranslationServiceConstants.Non_RIV.equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow()) && "IPCC".equalsIgnoreCase(upstreamOrder.getOrderHeader().getProduct())){
+					customTranslationSbcOrderUtilSupport.addEntityReferenceChildLocation(entityOrderDetailsSpec,entityOrder);
+				}
+				if("VRD-NON-TSO".equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow()) || "RIV".equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow())|| isItPCIASAOriginatedOrder) {
+					
+					Object[] columnValues = { upstreamOrder.getOrderHeader().getWorkOrderNumber(), Long.valueOf(upstreamOrder.getOrderHeader().getWorkOrderVersion()) };
+					 rawDataList = outboundGenericServiceImpl.getGenericTableDataFromSqlKey(OrdngTranslationServiceConstants.SQL_KEY_FOR_NON_TN_INTERFACE_ORDER, OrdngTranslationServiceConstants.ORDNG_TRANSLATION_SERVICE,	Domain.ORDERING, columnValues);
+					if(checkEmeaIasa) {
+						String vplanData = rawDataList.get(0).get(0).getColumnValue();
+						DocumentContext jsonContext = genericTranslationCoreEngine.getJsonContext(vplanData);
+						orderHeader.setSbcId(genericTranslationCoreEngine.getValueFromJPath("$.responsePayload.[?(@.specCode == \"VPLAN\")].specValue.specifications[?(@.specCode == \"nonRivCclData\")].specValue.specifications[?(@.specCode == \"sbcId\")].specValue",jsonContext).toString());
+					}
+					 setNodeNameForTsoSBCToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					 setIpVersionForSBCNonRiv(entityOrderDetailsSpec,additionalAttributes,upstreamOrder,rawDataList);
+					 setSbcShortName(entityOrderDetailsSpec, additionalAttributes, orderHeader);
+					 setEntityNameForSbc(entityOrderDetailsSpec,additionalAttributes,upstreamOrder);
+					 String entityName  = translateProcessServiceUtil.getSpecValueBySpecNameFromDetailSpec(entityOrderDetailsSpec, "ENTITY_NAME");
+					 setEntityIdForSbc(entityOrderDetailsSpec, additionalAttributes,entityOrder, entityName, upstreamOrder);
+					 if (!"SBC".equals(entityOrder.getEntityTypeName())) {
+						 customTranslationLocationInstallOrderUtil.setCallingPlanIdSBC(entityOrderDetailsSpec, additionalAttributes);
+					 }
+					customTranslationPbxTnOrderUtil.setNodeCustMedNetwork(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					customTranslationPbxTnOrderUtil.setNodeCustSigNetwork(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					 customTranslationDeviceOrderUtil.setSipDomainAndParentDomainForDevice(entityOrderDetailsSpec, additionalAttributes,upstreamOrder, entityOrder);
+					setSbcClliToSpec(entityOrderDetailsSpec, additionalAttributes, upstreamOrder,orderHeader);
+					 if("RIV".equals(upstreamOrder.getOrderHeader().getFlow())&& childEntitesForDevice.getOrderDetailSpec()!=null) {
+						 customTranslationPbxTnOrderUtil.setAccessTypeForSBCRiv(entityOrderDetailsSpec, additionalAttributes,rawDataList,upstreamOrder.getOrderHeader().getRegion());
+							translateProcessServiceUtil.upsertSpecValueOfDetailSpecBySpecName(entityOrderDetailsSpec, "PARENT_DOMAIN", translateProcessServiceUtil.getSpecValueBySpecNameFromDetailSpec(childEntitesForDevice.getOrderDetailSpec(), "PARENT_DOMAIN"), additionalAttributes);
+					 } else {
+						setAccessTypeForSBCNonRiv(entityOrderDetailsSpec, additionalAttributes,upstreamOrder,rawDataList);
+					 }
+					if(!translateProcessServiceUtilSupport.checkRIVPCFlow(upstreamOrder)) {
+						setCurictId(entityOrderDetailsSpec, additionalAttributes, upstreamOrder);
+					}
+					setDeviceDetails(entityOrderDetailsSpec, additionalAttributes, upstreamOrder);
+					setSbcPrimaryCcl(entityOrderDetailsSpec, additionalAttributes, upstreamOrder,rawDataList);
+					
+					getProvSbcInfra(entityOrderDetailsSpec, additionalAttributes, orderHeader, upstreamOrder);
+					customTranslationSbcOrderUtilSupport.setRouterProvInfraSpec(entityOrder, additionalAttributes, orderHeader, upstreamOrder,entityOrderDetailsSpec);
+					setInterfaceNetworkTypeForSBC(entityOrderDetailsSpec, entityOrder, additionalAttributes);
+					setNwkNodeIdToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);	
+					
+					setSbcSecondaryCcl(entityOrderDetailsSpec, additionalAttributes, upstreamOrder,rawDataList);
+					setEntSigRealmForSbc(entityOrderDetailsSpec, additionalAttributes,upstreamOrder,orderHeader);
+					setCustomerSbcSignalingInterface_ForSBCInfra(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					custVpnId = translateProcessServiceUtil.getSpecValueBySpecNameFromDetailSpec(entityOrderDetailsSpec, "CUST_VPN_ID");
+					setCustShareMedRealmForSbc(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader,custVpnId,entityOrder);
+					setDeviceDetails(entityOrderDetailsSpec, additionalAttributes, upstreamOrder);
+					setEntTrunkCarrRealmForSbc(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					setCarrShareMedRealmForSbc(entityOrderDetailsSpec, additionalAttributes, upstreamOrder,orderHeader);
+					setEntMaxTrustForSbc(entityOrderDetailsSpec, additionalAttributes, orderHeader, upstreamOrder);
+					setCustMedInterfaceForSbc(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					setCustDnsRealmForTsoSbc(entityOrderDetailsSpec, additionalAttributes, orderHeader, custVpnId);
+					setCustMedBaseIpForSbc(entityOrderDetailsSpec, additionalAttributes, orderHeader, upstreamOrder);
+					setLstDomainSfxForSbc(entityOrderDetailsSpec, additionalAttributes);
+					setCustVpnMedBW(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					
+					customTranslationPbxTnOrderUtil.setCarrSigBaseIpForSbc(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					customTranslationPbxTnOrderUtil.setNodeSbcInfraProvisioningId(entityOrderDetailsSpec, additionalAttributes, orderHeader, upstreamOrder);
+//NodeInfraProvisioningNonTso
+					setIpVersionForSBCNonRiv(entityOrderDetailsSpec,additionalAttributes,upstreamOrder,rawDataList);
+					setCustomerSignalingVlanToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);	
+					setCustomerMediaVlanToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setCustomerMediaGatewayIPToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);	
+					setCustomerSignalingGatewayIPToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setCustomerSignalingSubnetToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setNodeAccessCategory(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setPrimaryRouterClliToSpec(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					setSecondaryRouterClliToSpec(entityOrderDetailsSpec, additionalAttributes, upstreamOrder, orderHeader);
+					setCustomerSignalingBaseIPToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);	
+					setSigPolicingEnabledToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setBwPolicingEnabledToSpec(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setCarrierSignalingVlanForSBCInfra(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setCarrierMediaVlanForSBCInfra(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setDnsIP1ForSBCInfra(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setDnsIP2ForSBCInfra(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);		
+					setCustomerMediaSubnetForSBCInfra(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setCarrSigInterface(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+//SbcRouter
+					setPeIpAddress(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setCeIpAddress(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setRouterClli(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setPvcDlci(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setPvcDlci(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setPvcCircuit(entityOrderDetailsSpec,additionalAttributes,orderHeader,upstreamOrder);
+					setSbcConstantSpecs(entityOrderDetailsSpec,additionalAttributes);
+				}
+				String orderReadURL = orderGetSequenceIdUrl+"/"+OrdngTranslationServiceConstants.ORDNG+"/"+OrdngTranslationServiceConstants.SEQ_NAME;
+				String sequence = (String)restClient.invokeService(null, orderReadURL, null, null, String.class, HttpMethod.GET);
+				OrderDetailSpec childEntitesForGatewaySbc = setChildEntitesForDeviceSpec("GATEWAY_SBC",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,sequence);
+				childEntitesForGatewaySbc.setSpecAction(additionalAttributes.getSpecAction());
+				OrderDetailSpec childEntitesForSbcSigTier = setChildEntitesForDeviceSpec("SBC_SIG_TIER",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,sequence);
+				childEntitesForSbcSigTier.setSpecAction(additionalAttributes.getSpecAction());
+				
+				OrderDetailSpec childEntitesForSignalingInterface = setChildEntitesForDeviceSpec("SIGNALING_INTERFACE",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,sequence);
+				childEntitesForSignalingInterface.setSpecAction(additionalAttributes.getSpecAction());
+				childEntitesForSignalingInterface.setSpecValue("CARRIER");
+				OrderDetailSpec childEntitesForSignalingInterface1 = setChildEntitesForDeviceSpec("SIGNALING_INTERFACE_CUST",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,sequence);
+				childEntitesForSignalingInterface1.setSpecAction(additionalAttributes.getSpecAction());
+				childEntitesForSignalingInterface1.setSpecValue("CUSTOMER");
+				if (StringUtils.equalsIgnoreCase(upstreamOrder.getOrderHeader().getServiceType(), "HIPC") &&
+					      StringUtils.equalsAnyIgnoreCase(upstreamOrder.getOrderHeader().getOrderType(), "INSTALL", "CANCEL")
+					      && StringUtils.equalsAnyIgnoreCase(upstreamOrder.getOrderHeader().getOriginatingSystem(), "PC_IASA", "PC_OPRO", "PC_IORDER")) {
+					   regClientSbc = setChildEntitesForDeviceSpec("REG_CLIENT_SBC",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,sequence);
+					   regClientSbc.getOrderDetailSpec().stream()
+					               .filter(regClientSbcData -> StringUtils.equalsIgnoreCase("SIGNALING_INTERFACE", regClientSbcData.getSpecName()))
+					               .forEach(regClientSbcData-> regClientSbcData.setOrderDetailSpec(childEntitesForSignalingInterface.getOrderDetailSpec()));
+					   regClientSbc.setSpecAction(additionalAttributes.getSpecAction());
+					}
+				List<OrderDetailSpec> list= new ArrayList<>();	
+				childEntitesForGatewaySbc.getOrderDetailSpec().addAll(Arrays.asList(childEntitesForSbcSigTier,childEntitesForSignalingInterface,childEntitesForSignalingInterface1));
+				
+				OrderDetailSpec deviceChildEntity = customTranslationPbxTnOrderUtil.getEntitySpecListForChildSpec(entityOrders,"DEVICE");
+
+				/* below call is happening twice because we have 2 ENTITY_REFERENCE objects - 1 for customer and 1 for location. */
+
+				if(isItPCIASAOriginatedOrder && OrdngTranslationServiceConstants.Non_RIV.equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow()) && "CHANGE".equalsIgnoreCase(upstreamOrder.getOrderHeader().getOrderType())){
+					customTranslationSbcOrderUtilSupport.setDeviceTypeForSbc(entityOrderDetailsSpec,additionalAttributes,childEntitesForDevice, upstreamOrder);
+					customTranslationSbcOrderUtilSupport.setLocationNameSpecsForChange(entityOrderDetailsSpec,additionalAttributes,childEntitesForDevice);
+					String entityName = getEntityName(translateProcessServiceUtil.getSpecValueBySpecNameFromDetailSpec(entityOrderDetailsSpec, OrdngTranslationServiceConstants.LOCATION_ID),"GET_ENTITY_NAME_FROM_SVCINV_DEVICE");
+					if(StringUtils.isEmpty(entityName)){entityName = getEntityName(translateProcessServiceUtil.getSpecValueBySpecNameFromDetailSpec(entityOrderDetailsSpec, OrdngTranslationServiceConstants.CUSTOMER_ID),"GET_ENTITY_NAME_FROM_SVCINV_DEVICE");}
+					translateProcessServiceUtil.upsertSpecValueOfDetailSpecBySpecName(entityOrderDetailsSpec, OrdngTranslationServiceConstants.ENTITY_NAME,entityName, additionalAttributes);
+					translateProcessServiceUtil.upsertSpecValueOfDetailSpecBySpecName(childEntitesForDevice.getOrderDetailSpec(), OrdngTranslationServiceConstants.ENTITY_NAME,entityName, additionalAttributes);
+					childEntitesForDevice.getOrderDetailSpec().addAll(list);
+					deviceChildEntity.setOrderDetailSpec(childEntitesForDevice.getOrderDetailSpec());
+				}
+				if(!(isItPCIASAOriginatedOrder && OrdngTranslationServiceConstants.Non_RIV.equalsIgnoreCase(upstreamOrder.getOrderHeader().getFlow()) && !"CHANGE".equalsIgnoreCase(upstreamOrder.getOrderHeader().getOrderType()))) {
+					list.add(childEntitesForGatewaySbc);
+					if(deviceChildEntity.getOrderDetailSpec()!=null) {
+					translateProcessServiceUtilSupport.removeSpecFromSpecList(deviceChildEntity.getOrderDetailSpec(), Collections.singletonList("ENTITY_REFERENCE"));
+					list.addAll(deviceChildEntity.getOrderDetailSpec());
+					customTranslationSbcOrderUtilSupport.setDeviceTypeForSbcDefaults(entityOrderDetailsSpec, additionalAttributes, deviceChildEntity);
+					customTranslationSbcOrderUtilSupport.setDeviceDetailsForSbcDefaults(additionalAttributes, deviceChildEntity);
+					deviceChildEntity.setOrderDetailSpec(list);
+					}
+				}
+
+				if(customTranslationSbcOrderUtilSupport.checkPCIasaNonRivNotChange(upstreamOrder)) {
+					customTranslationSbcOrderUtilSupport.addDeviceSpecsToDeviceEntity(childEntitesForDevice,entityOrderDetailsSpec,entityOrderDetailId);
+					customTranslationSbcOrderUtilSupport.setDeviceSpecs(entityOrderDetailsSpec,childEntitesForSbcSigTier,childEntitesForDevice,additionalAttributes);
+					list.add(childEntitesForGatewaySbc);
+					childEntitesForDevice.getOrderDetailSpec().addAll(list);
+					deviceChildEntity.setOrderDetailSpec(childEntitesForDevice.getOrderDetailSpec());
+				}
+				
+				if(translateProcessServiceUtilSupport.checkRIVNonRIVPCFlow(upstreamOrder)
+						&& !("PC_IASA".equalsIgnoreCase(upstreamOrder.getOrderHeader().getOriginatingSystem())
+						&& "EMEA".equalsIgnoreCase(upstreamOrder.getOrderHeader().getRegion()))
+						&& !Arrays.asList(OrdngTranslationServiceConstants.Non_RIV,"VRD-NON-TSO","VRD-TSO", "RIV").contains(upstreamOrder.getOrderHeader().getFlow())) {
+					customTranslationSbcOrderUtilSupport.setDeviceSpecs(entityOrderDetailsSpec,childEntitesForSbcSigTier,deviceChildEntity,additionalAttributes);
+				}
+				if(translateProcessServiceUtilSupport.checkRIVPCFlow(upstreamOrder))
+					customTranslationSbcOrderUtilSupport.setDeviceSpecsRIV(entityOrderDetailsSpec,childEntitesForSbcSigTier,deviceChildEntity,additionalAttributes, entityOrders, orderHeader, upstreamOrder);
+
+				if("CANCEL".equals(upstreamOrder.getOrderHeader().getOrderType()) && entityOrders!=null) {
+					translateProcessserviceImplSupport.setSpecActionforDevice(childEntitesForSbcSigTier.getOrderDetailSpec());
+					translateProcessserviceImplSupport.setSpecActionforDevice(childEntitesForSignalingInterface.getOrderDetailSpec());
+					translateProcessserviceImplSupport.setSpecActionforDevice(childEntitesForSignalingInterface1.getOrderDetailSpec());	
+					childEntitesForSbcSigTier.setSpecAction("RETAIN");
+					childEntitesForSignalingInterface.setSpecAction("RETAIN");
+					childEntitesForSignalingInterface1.setSpecAction("RETAIN");
+					childEntitesForGatewaySbc.setSpecAction("RETAIN");
+					translateProcessserviceImplSupport.setSpecActionforDevice(childEntitesForGatewaySbc.getOrderDetailSpec());
+					setDeviceChildSpecsForDisconnectFlow(entityOrders,childEntitesForGatewaySbc);			
+       }
+				OrderDetailSpec childEntitesForNodeSbcInfraProvisioning = setChildEntitesForDeviceSpec("NODE_SBC_INFRA_PROVISIONING",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,StringUtils.EMPTY);
+				OrderDetailSpec childEntitesForNodeInfraProvisioning = setChildEntitesForDeviceSpec("NODE_INFRA_PROVISIONING",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,StringUtils.EMPTY);
+				childEntitesForNodeInfraProvisioning.setSpecAction(additionalAttributes.getSpecAction());
+				OrderDetailSpec childEntitesForSbcRouter = setChildEntitesForDeviceSpec("SBC_ROUTER",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,StringUtils.EMPTY);
+				childEntitesForSbcRouter.setSpecAction(additionalAttributes.getSpecAction());
+				OrderDetailSpec childEntitesForSbcInfraProvisioning = setChildEntitesForDeviceSpec("SBC_INFRA_PROVISIONING",upstreamOrder,entityOrder,entityOrderDetailsSpec, additionalAttributes, orderHeader,StringUtils.EMPTY);
+				customTranslationSbcOrderUtilSupport.setVlansForSbcInfraProvisioning(childEntitesForNodeInfraProvisioning,childEntitesForSbcInfraProvisioning,additionalAttributes);
+				childEntitesForSbcInfraProvisioning.setSpecAction(additionalAttributes.getSpecAction());
+				childEntitesForNodeInfraProvisioning.getOrderDetailSpec().add(childEntitesForSbcRouter);
+				childEntitesForNodeSbcInfraProvisioning.setSpecName("NODE_SBC_INFRA_PROVISIONING");
+				childEntitesForNodeSbcInfraProvisioning.getOrderDetailSpec().addAll(Arrays.asList(childEntitesForNodeInfraProvisioning,childEntitesForSbcInfraProvisioning));
+				childEntitesForNodeSbcInfraProvisioning.setSpecAction(additionalAttributes.getSpecAction());
+				if(checkEmeaIasa) {
+					entityOrderDetailsSpec.addAll(Arrays.asList(childEntitesForNodeSbcInfraProvisioning));
+				}
+				else {
+					entityOrderDetailsSpec.addAll(Objects.nonNull(regClientSbc) ? Arrays.asList(childEntitesForNodeSbcInfraProvisioning,deviceChildEntity,regClientSbc):
+						Arrays.asList(childEntitesForNodeSbcInfraProvisioning,deviceChildEntity));					
+				}
+				if(translateProcessServiceUtilSupport.checkRIVNonRIVPCFlow(upstreamOrder) && StringUtils.equalsIgnoreCase(upstreamOrder.getOrderHeader().getOrderType(), "INSTALL")) {
+					String vpnId = custVpnId;
+					entityOrders.stream()
+							.filter(eo -> StringUtils.equalsIgnoreCase(eo.getEntityTypeName(), "LOCATION"))
+							.flatMap(eo-> eo.getEntityOrderDetails().stream())
+							.map(eod-> eod.getOrderDetailSpec().add(childEntitesForNodeSbcInfraProvisioning))
+							.collect(Collectors.toList());
+					//adding vpn_id in enterprise RIV
+					entityOrders.stream()
+							.filter(eo -> StringUtils.equalsIgnoreCase(eo.getEntityTypeName(), "ENTERPRISE"))
+							.flatMap(eo-> eo.getEntityOrderDetails().stream())
+							.forEach(eo -> translateProcessServiceUtil.upsertSpecValueOfDetailSpecBySpecName(eo.getOrderDetailSpec(),"VPN_ID", vpnId, additionalAttributes));
+
+				}
+				LOG.info("Exited addAdditionalCustomLocationInstallFields");
+			} catch (Exception e) {
+				LOG.info("Exception for SBC child Entities ->", e);
+			}
+		}
