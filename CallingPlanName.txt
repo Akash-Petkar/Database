@@ -1,4 +1,123 @@
 public boolean checkModifyCallingPlan(String jsonData) {
+    JSONObject jsonObject = new JSONObject(jsonData);
+
+    JSONArray specifications = jsonObject.getJSONObject("serviceOrder")
+                                         .getJSONObject("services")
+                                         .getJSONObject("commonSpecifications")
+                                         .getJSONArray("specification");
+
+    String apiName = null;
+    for (Object obj : specifications) {
+        JSONObject spec = (JSONObject) obj;
+        if ("API_NAME".equals(spec.optString("code"))) {
+            apiName = spec.optString("value");
+            break;
+        }
+    }
+
+    String sourceSystem = jsonObject.getJSONObject("serviceOrder")
+                                    .getJSONObject("serviceOrderHeader")
+                                    .optString("originatingSystem");
+
+    return "modifyCallingPlan".equals(apiName) && "CSSOP".equals(sourceSystem);
+}
+
+public String setCallingPlanName(String jsonData) {
+    JSONObject jsonObject = new JSONObject(jsonData);
+    String locationId = extractLocationId(jsonObject);
+
+    if (locationId == null) return jsonData;  // If no locationId, return original data
+
+    String callingPlanName = getCallingPlanName(locationId);
+    return setCallingPlanNameForLocation(callingPlanName, jsonData);
+}
+
+private String extractLocationId(JSONObject jsonObject) {
+    JSONArray serviceCapabilities = jsonObject.getJSONObject("serviceOrder")
+                                              .getJSONObject("services")
+                                              .getJSONObject("convergedService")
+                                              .optJSONArray("serviceCapability");
+
+    if (serviceCapabilities == null) return null;
+
+    for (Object obj : serviceCapabilities) {
+        JSONArray specifications = ((JSONObject) obj).optJSONArray("specification");
+        if (specifications == null) continue;
+
+        for (Object specObj : specifications) {
+            JSONObject spec = (JSONObject) specObj;
+            if ("locationId".equals(spec.optString("code"))) {
+                return spec.optString("value");
+            }
+        }
+    }
+    return null;
+}
+
+public String getCallingPlanName(String locationId) {
+    List<GenericDataBaseRequestDTO> requestList = new ArrayList<>();
+    GenericDataBaseRequestDTO request = new GenericDataBaseRequestDTO();
+    request.setSqlKey("GET_CALLING_PLAN_NAME_FOR_CSSOP");
+    request.setSourceService("CSSOP");
+    request.setColumnValues(new String[] { locationId });
+
+    requestList.add(request);
+    List<GenericDataBaseResponseDTO> responses = getData(requestList);
+
+    for (GenericDataBaseResponseDTO response : responses) {
+        for (List<GenericTableData> dataList : response.getDataList()) {
+            for (GenericTableData data : dataList) {
+                if ("CALLING_PLAN_NAME".equals(data.getColumnName())) {
+                    return data.getColumnValue();
+                }
+            }
+        }
+    }
+    return null;  // Return null if no calling plan name is found
+}
+
+public List<GenericDataBaseResponseDTO> getData(List<GenericDataBaseRequestDTO> requestList) {
+    try {
+        HttpEntity<List<GenericDataBaseRequestDTO>> requestEntity = new HttpEntity<>(requestList, new HttpHeaders());
+        ResponseEntity<List<GenericDataBaseResponseDTO>> responseEntity = restTemplate.exchange(
+                svcInvReadUrl, HttpMethod.POST, requestEntity,
+                new ParameterizedTypeReference<List<GenericDataBaseResponseDTO>>() {});
+
+        return responseEntity.getBody();
+    } catch (Exception e) {
+        LOG.error(ERROR, e.getMessage());
+        return Collections.emptyList();  // Return an empty list in case of failure
+    }
+}
+
+public String setCallingPlanNameForLocation(String callingPlanName, String jsonData) {
+    if (callingPlanName == null) return jsonData;  // If no callingPlanName, return original data
+
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+        JsonNode rootNode = mapper.readTree(jsonData);
+        ArrayNode specificationArray = (ArrayNode) rootNode.path("serviceOrder")
+                                                           .path("services")
+                                                           .path("convergedService")
+                                                           .path("serviceCapability")
+                                                           .get(0)
+                                                           .path("specification");
+
+        for (JsonNode specNode : specificationArray) {
+            if ("callingPlanName".equals(specNode.path("code").asText())) {
+                ((ObjectNode) specNode).put("value", callingPlanName);
+                break;
+            }
+        }
+        return mapper.writeValueAsString(rootNode);
+    } catch (JsonProcessingException e) {
+        e.printStackTrace();
+        return jsonData;  // Return original data in case of an error
+    }
+}
+
+===========================================================================================================================
+public boolean checkModifyCallingPlan(String jsonData) {
 		 JSONObject jsonObject = new JSONObject(jsonData);
 	        
 	        String apiName = null;
