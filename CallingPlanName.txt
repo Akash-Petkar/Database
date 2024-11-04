@@ -1,3 +1,153 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.*;
+
+class MyServiceTest {
+
+    @InjectMocks
+    private MyService myService;
+
+    @Mock
+    private RestTemplate restTemplate;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    private static final String SAMPLE_JSON = "{ \"serviceOrder\": { \"services\": { \"commonSpecifications\": { \"specification\": [ { \"code\": \"API_NAME\", \"value\": \"modifyCallingPlan\" } ] }, \"serviceOrderHeader\": { \"originatingSystem\": \"CSSOP\" } } } }";
+    private static final String SAMPLE_CONVERGED_SERVICE_JSON = "{ \"serviceOrder\": { \"services\": { \"convergedService\": { \"serviceCapability\": [ { \"specification\": [ { \"code\": \"locationId\", \"value\": \"123\" } ] } ] } } } }";
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    void testCheckModifyCallingPlan_ModifyCallingPlanAndCSSOP_ShouldReturnTrue() {
+        assertTrue(myService.checkModifyCallingPlan(SAMPLE_JSON));
+    }
+
+    @Test
+    void testCheckModifyCallingPlan_InvalidApiName_ShouldReturnFalse() {
+        String jsonData = SAMPLE_JSON.replace("modifyCallingPlan", "otherApi");
+        assertFalse(myService.checkModifyCallingPlan(jsonData));
+    }
+
+    @Test
+    void testCheckModifyCallingPlan_InvalidSourceSystem_ShouldReturnFalse() {
+        String jsonData = SAMPLE_JSON.replace("CSSOP", "OTHER_SYSTEM");
+        assertFalse(myService.checkModifyCallingPlan(jsonData));
+    }
+
+    @Test
+    void testSetCallingPlanName_WithLocationId_ShouldReturnUpdatedJson() throws Exception {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(getMockResponse()));
+
+        when(objectMapper.readTree(anyString())).thenReturn(objectMapper.readTree(SAMPLE_CONVERGED_SERVICE_JSON));
+
+        String result = myService.setCallingPlanName(SAMPLE_CONVERGED_SERVICE_JSON);
+
+        assertTrue(result.contains("\"value\":\"mockCallingPlan\""));
+    }
+
+    @Test
+    void testSetCallingPlanName_NoLocationId_ShouldReturnOriginalJson() {
+        String jsonData = SAMPLE_CONVERGED_SERVICE_JSON.replace("\"locationId\"", "\"otherId\"");
+        assertEquals(jsonData, myService.setCallingPlanName(jsonData));
+    }
+
+    @Test
+    void testExtractLocationId_FoundLocationId_ShouldReturnLocationId() {
+        String result = myService.extractLocationId(new JSONObject(SAMPLE_CONVERGED_SERVICE_JSON));
+        assertEquals("123", result);
+    }
+
+    @Test
+    void testExtractLocationId_NoLocationId_ShouldReturnNull() {
+        String jsonData = SAMPLE_CONVERGED_SERVICE_JSON.replace("locationId", "otherId");
+        assertNull(myService.extractLocationId(new JSONObject(jsonData)));
+    }
+
+    @Test
+    void testGetCallingPlanName_FoundCallingPlanName_ShouldReturnName() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(getMockResponse()));
+
+        String result = myService.getCallingPlanName("123");
+        assertEquals("mockCallingPlan", result);
+    }
+
+    @Test
+    void testGetCallingPlanName_NoCallingPlanName_ShouldReturnNull() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(Collections.emptyList()));
+
+        String result = myService.getCallingPlanName("123");
+        assertNull(result);
+    }
+
+    @Test
+    void testGetData_SuccessfulRequest_ShouldReturnResponseList() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(getMockResponse()));
+
+        List<GenericDataBaseResponseDTO> response = myService.getData(new ArrayList<>());
+        assertEquals(1, response.size());
+    }
+
+    @Test
+    void testGetData_RequestFailure_ShouldReturnEmptyList() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenThrow(new RuntimeException("Test Exception"));
+
+        List<GenericDataBaseResponseDTO> response = myService.getData(new ArrayList<>());
+        assertTrue(response.isEmpty());
+    }
+
+    @Test
+    void testSetCallingPlanNameForLocation_ValidData_ShouldUpdateJson() throws Exception {
+        when(objectMapper.readTree(anyString())).thenReturn(objectMapper.readTree(SAMPLE_CONVERGED_SERVICE_JSON));
+
+        String result = myService.setCallingPlanNameForLocation("mockCallingPlan", SAMPLE_CONVERGED_SERVICE_JSON);
+        assertTrue(result.contains("\"value\":\"mockCallingPlan\""));
+    }
+
+    @Test
+    void testSetCallingPlanNameForLocation_NullCallingPlan_ShouldReturnOriginalJson() throws Exception {
+        String result = myService.setCallingPlanNameForLocation(null, SAMPLE_CONVERGED_SERVICE_JSON);
+        assertEquals(SAMPLE_CONVERGED_SERVICE_JSON, result);
+    }
+
+    private List<GenericDataBaseResponseDTO> getMockResponse() {
+        GenericTableData tableData = new GenericTableData();
+        tableData.setColumnName("CALLING_PLAN_NAME");
+        tableData.setColumnValue("mockCallingPlan");
+
+        List<GenericTableData> responseList = Collections.singletonList(tableData);
+        List<List<GenericTableData>> dataList = Collections.singletonList(responseList);
+
+        GenericDataBaseResponseDTO response = new GenericDataBaseResponseDTO();
+        response.setDataList(dataList);
+
+        return Collections.singletonList(response);
+    }
+}
+
+==========================================================================================
 public boolean checkModifyCallingPlan(String jsonData) {
     JSONObject jsonObject = new JSONObject(jsonData);
 
