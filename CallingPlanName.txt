@@ -1,3 +1,109 @@
+@Test
+	public void translateOrderServiceRuleSetTest2() throws Exception, IntrospectionException {
+
+		List<RuleSet> listrulesInstall = new ArrayList<>();
+		listrulesInstall.add(RuleSet.TN_AVAILABLE);
+
+		Mockito.when(translationRuleEngine.getRules(Mockito.any(), Mockito.isNull())).thenReturn(listrulesInstall);
+
+		upstreamorderRespEntity = ResponseEntity.status(HttpStatus.OK).body(upstreamOrder);
+
+		Mockito.when(restClient.invokeService(any(), any(), Mockito.isNull(), Mockito.isNull(), Mockito.eq(Order.class),
+				Mockito.eq(HttpMethod.POST))).thenReturn(order);
+
+		Mockito.doNothing().when(customTranslationServiceUtilSupport).setCommonOrderSpecBSAndNSClli(Mockito.any(),
+				Mockito.any(), Mockito.any());
+		Mockito.when(translateProcessServiceUtilSupport.getServiceTypeFromOrderHeader(upstreamOrder.getOrderHeader()))
+				.thenReturn("IP Integrated");
+		Mockito.when(translateProcessServiceUtilSupport.getOrderTypeFromOrderHeader(upstreamOrder.getOrderHeader()))
+				.thenReturn("ADD");
+		Mockito.when(trasnServiceImpl.checkModifyCallingPlan(SAMPLE_JSON)).thenReturn(true);
+
+		GenericDataBaseResponseDTO genericDataBaseResponseDTO = new GenericDataBaseResponseDTO();
+		List<GenericDataBaseResponseDTO> genericDataBaseResponseDTOs = new ArrayList<>();
+		genericDataBaseResponseDTOs.add(genericDataBaseResponseDTO);
+		genericDataBaseResponseDTOEntity = new ResponseEntity<>(genericDataBaseResponseDTOs, HttpStatus.ACCEPTED);
+		optionalGenericList.get().setColumnValue("");
+		upstreamOrder.getOrderHeader().setFunctionCode("INTRA_OSSR_LID");
+		trasnServiceImpl.translateUpstreamOrder(upstreamOrder);
+
+		List<RuleSet> listrulesInstall2 = new ArrayList<>();
+		listrulesInstall2.add(RuleSet.CONNECT_LAST_LOCATION_DISCONNECT);
+		Mockito.when(translationRuleEngine.getRules(Mockito.any(), Mockito.isNull())).thenReturn(listrulesInstall2);
+		trasnServiceImpl.translateUpstreamOrder(upstreamOrder);
+
+	}
+
+
+private Order enrichTranslateUpstreamOrder(UpstreamOrder upstreamOrder, List<TnOrderTnlist> tnDetailList) throws IOException {
+		Instant startTimePerf = Instant.now();
+		List<RuleSet> ruleSets = translationRuleEngine.getRules(upstreamOrder,OrdngTranslationServiceConstants.PROCESS_TYPE_TRANSLATED);
+		if (CollectionUtils.isEmpty(ruleSets)) {
+			throw new AppException(ServiceErrorConstants.RUNTIME_ERROR_CODE, ServiceErrorConstants.RUNTIME_ERROR,ServiceErrorConstants.FAILUREPOINT_EMPTYRULESET);
+		}
+		translationServiceCacheUtil.setObjectToCache(translationServiceCacheUtilSupport.getDistinctPrefixedKey(OrdngTranslationServiceConstants.RULE_SET_CACHE_KEY), ruleSets);
+		Order order;
+		TnOrder tnOrderResp = null;
+		if ((!translateProcessServiceUtilSupport.checkRIVNonRIVPCFlow(upstreamOrder) && (ruleSets.contains(RuleSet.TN_AVAILABLE) || FunctionCode.getFunctionCodeListForIproDirectOrder()
+				.contains(upstreamOrder.getOrderHeader().getFunctionCode()))) && !ruleSets.contains(RuleSet.CONNECT_RIV_LOCATION_DISCONNECT)) {
+			String serviceType = translateProcessServiceUtilSupport.getServiceTypeFromOrderHeader(upstreamOrder.getOrderHeader());
+			String orderType = translateProcessServiceUtilSupport.getOrderTypeFromOrderHeader(upstreamOrder.getOrderHeader());
+			if (!(ServiceType.isLocationServiceType(serviceType) && OrdngTranslationServiceConstants.CANCEL.equalsIgnoreCase(orderType))) {
+				if (ruleSets.contains(RuleSet.CONNECT_DEVICE_DISCONNECT) || ruleSets.contains(RuleSet.CONNECT_LOCATION_DISCONNECT) || ruleSets.contains(RuleSet.CONNECT_LAST_LOCATION_DISCONNECT)) {
+					tnOrderResp = translateProcessServiceDisconnectUtil.getTnOrderDataFromInv(upstreamOrder);
+				} else
+					tnOrderResp = rawOrderProcessUtil.getTnOrderData(upstreamOrder, tnDetailList);/* RawORder Change */
+			} }	
+		
+		boolean checkModifyCallingPlan = checkModifyCallingPlan(upstreamOrder.getRawOrderData());
+		if(checkModifyCallingPlan) {
+			String updatedRawOrder = modifyCallingOrderEvaluationServiceUtil.setCallingPlanName(upstreamOrder.getRawOrderData());
+			upstreamOrder.setRawOrderData(updatedRawOrder);
+		}
+		
+		taskLoggingAndErrorRetryUtil.mapUpstreamLogRequest(TaskCompletionLogSeverity.HIGH.toString(),TaskCompletionLogStatus.INIT.toString(), "Custom Translation of Order Started", MDC.getCopyOfContextMap());
+		order = parseTranslateOrder(upstreamOrder, tnOrderResp, ruleSets);
+		Instant endTimePerf = Instant.now();
+		LOG.info("LOGGING TIME in enrichTranslateUpstreamOrder --> {}",	Duration.between(startTimePerf, endTimePerf).toMillis());
+		LOG.info("Exited enrichTranslateUpstreamOrder");
+		return order;
+	}
+
+	public boolean checkModifyCallingPlan(String jsonData) {
+	    JSONObject jsonObject = new JSONObject(jsonData);
+
+	    org.json.JSONArray specifications = jsonObject.getJSONObject("serviceOrder")
+	                                         .getJSONObject("services")
+	                                         .getJSONObject("commonSpecifications")
+	                                         .getJSONArray("specification");
+
+	    String apiName = null;
+	    for (Object obj : specifications) {
+	        JSONObject spec = (JSONObject) obj;
+	        if ("API_NAME".equals(spec.optString("code"))) {
+	            apiName = spec.optString("value");
+	            break;
+	        }
+	    }
+
+	    String sourceSystem = jsonObject.getJSONObject("serviceOrder")
+	                                    .getJSONObject("serviceOrderHeader")
+	                                    .optString("originatingSystem");
+
+	    return "modifyCallingPlan".equals(apiName) && "CSSOP".equals(sourceSystem);
+	}
+
+org.mockito.exceptions.misusing.MissingMethodInvocationException: 
+when() requires an argument which has to be 'a method call on a mock'.
+For example:
+    when(mock.getArticles()).thenReturn(articles);
+
+Also, this error might show up because:
+1. you stub either of: final/private/equals()/hashCode() methods.
+   Those methods *cannot* be stubbed/verified.
+   Mocking methods declared on non-public parent classes is not supported.
+2. inside when() you don't call method on mock but on some other object.
+=====================================================================================
 org.mockito.exceptions.misusing.UnfinishedStubbingException: 
 Unfinished stubbing detected here:
 -> at com.verizon.connect.ordng.translation.change.util.ModifyCallingOrderEvaluationServiceUtilTest.testSetCallingPlanName_WithLocationId_ShouldReturnUpdatedJson(ModifyCallingOrderEvaluationServiceUtilTest.java:409)
