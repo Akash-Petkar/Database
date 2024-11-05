@@ -1,0 +1,104 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vzvoip="http://vzvoip.verizon.com">
+  <soap:Body>
+    <vzvoip:CasperGORTrunkRequest>
+      <Header>
+        <TransactionId>435643534</TransactionId>
+      </Header>
+		<Activity>A</Activity>
+		<CLLI>423432</CLLI>
+		<CS2KCLLI>423432</CS2KCLLI>
+		<SLGTGN>43211</SLGTGN>
+		<TRUNK_ID>423432</TRUNK_ID>
+		<C5TRUNK_ID>423432</C5TRUNK_ID>
+		<GOR>Y</GOR>
+    </vzvoip:CasperGORTrunkRequest>
+  </soap:Body>
+</soap:Envelope>
+
+=====================================================================================
+<#ftl ns_prefixes={
+     "soapenv":"http://schemas.xmlsoap.org/soap/envelope/",
+	 "vzvoip":"http://vzvoip.verizon.com"}> {
+		
+	"serviceOrder": {
+			"serviceOrderHeader": {
+				"flow": "Non-RIV",
+				"supp": "false",
+				"isSupp": "false",
+				"region": "US",
+				"product": "VOIP",
+				"orderType": "",
+				"minorOrderType":  "", 
+				"serviceType": "CASPER_GOR_TRUNK", 
+				"functionCode": "RELEASE",
+				"lineOfBusiness": "WHOLESALE_VOIP",
+				"workOrderNumber": "0",
+				"workOrderVersion": "0",
+				"originatingSystem": "CASPER",
+				"userContact": {}
+			},
+			"services": {
+				"commonSpecifications": {
+					"specification": [{
+							"code": "TransactionId",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].Header.TransactionId}"
+						}]
+				},
+				"convergedService": {
+					"serviceCapability": [
+					{
+						"entityType": "CASPER_GOR_TRUNK",
+						"actionCode": "",					
+						"specification": [
+						{
+							"code": "Activity",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].Activity}"
+						},
+						{
+							"code": "CLLI",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].CLLI}"
+						},
+						{
+							"code": "CS2KCLLI",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].CS2KCLLI}"
+						},
+						{
+							"code": "SLGTGN",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].SLGTGN}"
+						},
+						{
+							"code": "TRUNK_ID",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].TRUNK_ID}"
+						},
+						{
+							"code": "C5TRUNK_ID",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].C5TRUNK_ID}"
+						},
+						{
+							"code": "GOR",
+							"value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"].GOR}"
+						}
+						]
+					}]
+				}
+			}
+		  }
+		}
+=========================================================================
+<soapenv:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vzvoip="http://vzvoip.verizon.com">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <vzv:CasperGORTrunkRequest>
+          <Header>
+             <TransactionId>435643534</TransactionId>
+          </Header>
+		<Activity>A</Activity>
+		<CLLI>423437</CLLI>
+		<CS2KCLLI>423437</CS2KCLLI>
+		<SLGTGN>43216</SLGTGN>
+		<TRUNK_ID>423437</TRUNK_ID>
+		<C5TRUNK_ID>423437</C5TRUNK_ID>
+		<GOR>Y</GOR>
+       </vzv:CasperGORTrunkRequest>
+    </soapenv:Body>
+</soapenv:Envelope>
