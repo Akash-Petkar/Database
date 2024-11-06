@@ -1,3 +1,33 @@
+public void setCallingPlanNameForModifyCallingPlan(OrderEntityOrder newEntityOrder,ServiceDto serviceInventory) {
+		String callingPlanName = null;
+		List<EntityChildReferenceData> entityChildReferenceData = serviceInventory.getEntityChildReferenceData();
+		for(EntityChildReferenceData referenceData:entityChildReferenceData) {
+			if("CALLING_PLAN".equals(referenceData.getChildEntityType())) {
+				List<EntityChildEntityData> childEntityData = referenceData.getChildEntityData();
+				for(EntityChildEntityData childData:childEntityData) {
+					EntityChildEntityAttributes childEntityAttributes = childData.getChildEntityAttributes();
+					List<CommonSpecHolder> attributes = childEntityAttributes.getAttributes();
+					for(CommonSpecHolder attr:attributes) {
+						if("CALLING_PLAN_NAME".equals(attr.getSpecName())) {
+							callingPlanName=attr.getSpecValue();
+						}
+					}
+				}
+			}
+		}
+		
+		List<OrderEntityOrderDetails> entityOrderDetails = newEntityOrder.getEntityOrderDetails();
+		for(OrderEntityOrderDetails orderDetails:entityOrderDetails) {
+			List<OrderDetailSpec> orderDetailSpec = orderDetails.getOrderDetailSpec();
+			for(OrderDetailSpec orderDetail:orderDetailSpec) {
+				if("CALLING_PLAN_NAME".equals(orderDetail.getSpecName())) {
+					orderDetail.setSpecValue(callingPlanName);
+				}
+			}
+		}	
+		LOG.info("ModifCallingPlan callingPlanNameUpdated {}",newEntityOrder);
+	}
+=========================================================================
 @Test
 	public void translateOrderServiceRuleSetTest2() throws Exception, IntrospectionException {
 
