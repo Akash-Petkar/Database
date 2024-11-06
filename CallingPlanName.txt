@@ -1,3 +1,28 @@
+public void setCallingPlanNameForModifyCallingPlan(OrderEntityOrder newEntityOrder, ServiceDto serviceInventory) {
+    // Extract calling plan name from service inventory
+    String callingPlanName = serviceInventory.getEntityChildReferenceData().stream()
+        .filter(refData -> "CALLING_PLAN".equals(refData.getChildEntityType()))
+        .flatMap(refData -> refData.getChildEntityData().stream())
+        .map(EntityChildEntityData::getChildEntityAttributes)
+        .flatMap(childAttributes -> childAttributes.getAttributes().stream())
+        .filter(attr -> "CALLING_PLAN_NAME".equals(attr.getSpecName()))
+        .map(CommonSpecHolder::getSpecValue)
+        .findFirst()
+        .orElse(null);
+
+    // If calling plan name is found, update in newEntityOrder
+    if (callingPlanName != null) {
+        newEntityOrder.getEntityOrderDetails().forEach(orderDetails -> 
+            orderDetails.getOrderDetailSpec().stream()
+                .filter(orderDetail -> "CALLING_PLAN_NAME".equals(orderDetail.getSpecName()))
+                .forEach(orderDetail -> orderDetail.setSpecValue(callingPlanName))
+        );
+    }
+
+    LOG.info("Modified Calling Plan: callingPlanNameUpdated {}", newEntityOrder);
+}
+
+========================================================
 public void setCallingPlanNameForModifyCallingPlan(OrderEntityOrder newEntityOrder,ServiceDto serviceInventory) {
 		String callingPlanName = null;
 		List<EntityChildReferenceData> entityChildReferenceData = serviceInventory.getEntityChildReferenceData();
