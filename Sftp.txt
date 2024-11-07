@@ -1,4 +1,56 @@
 public void transferCsvFiles() {
+    try {
+        setupSftpSession(null, "sftp"); // Initialize session with sftp channel
+
+        File latestDir = getLatestCsvDirectory();
+        if (latestDir == null) {
+            log.info("No directories found matching 'csv_reports_' pattern in /tmp.");
+            return;
+        }
+
+        File[] csvFiles = getCsvFilesInDirectory(latestDir);
+        if (csvFiles == null || csvFiles.length == 0) {
+            log.info("No CSV files found in the directory: " + latestDir.getName());
+        } else {
+            transferFiles(csvFiles, latestDir);
+            deleteDirectory(latestDir); // Delete after transfer
+            log.info("Deleted temporary directory: " + latestDir.getName());
+        }
+
+    } catch (FileNotFoundException e) {
+        log.error("File not found: ", e);
+    } catch (JSchException | SftpException e) {
+        log.error("Error occurred while transferring CSV files via SFTP", e);
+    } finally {
+        closeSftpSession(); // Ensure session is closed after transfer
+    }
+}
+
+private File getLatestCsvDirectory() {
+    File tempDir = new File(System.getProperty("java.io.tmpdir"));
+    File[] csvReportDirs = tempDir.listFiles((dir, name) -> name.startsWith("csv_reports_") && new File(dir, name).isDirectory());
+
+    if (csvReportDirs == null || csvReportDirs.length == 0) {
+        return null;
+    }
+
+    return findLatestDirectory(csvReportDirs);
+}
+
+private File[] getCsvFilesInDirectory(File directory) {
+    return directory.listFiles((dir, name) -> name.endsWith(".csv"));
+}
+
+private void transferFiles(File[] csvFiles, File directory) throws SftpException {
+    for (File csvFile : csvFiles) {
+        String fileName = csvFile.getName();
+        log.info("Uploading file: " + fileName + " from directory: " + directory.getName());
+        channel.put(csvFile.getAbsolutePath(), remoteFilePath + "/" + fileName); // Upload file to remote path
+    }
+}
+
+==============================================================
+public void transferCsvFiles() {
     File latestDir = null;
     try {
         setupSftpSession(null, "sftp"); // Initialize session with sftp channel
