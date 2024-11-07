@@ -1,3 +1,76 @@
+public void transferCsvFiles() {
+    File latestDir = null;
+    try {
+        setupSftpSession(null, "sftp"); // Initialize session with sftp channel
+
+        File tempDir = new File(System.getProperty("java.io.tmpdir"));
+        File[] csvReportDirs = tempDir.listFiles((dir, name) -> name.startsWith("csv_reports_") && new File(dir, name).isDirectory());
+
+        if (Objects.nonNull(csvReportDirs) && csvReportDirs.length > 0) {
+            // Find the most recently created csv_reports_ directory
+            latestDir = findLatestDirectory(csvReportDirs);
+
+            if (latestDir != null) {
+                File[] csvFiles = latestDir.listFiles((dir, name) -> name.endsWith(".csv"));
+
+                if (Objects.nonNull(csvFiles) && csvFiles.length > 0) {
+                    for (File csvFile : csvFiles) {
+                        String fileName = csvFile.getName();
+                        log.info("Uploading file: " + fileName + " from directory: " + latestDir.getName());
+
+                        channel.put(csvFile.getAbsolutePath(), remoteFilePath + "/" + fileName); // Upload file to remote path
+                    }
+                } else {
+                    log.info("No CSV files found in the directory: " + latestDir.getName());
+                }
+            }
+        } else {
+            log.info("No directories found matching 'csv_reports_' pattern in /tmp.");
+        }
+    } catch (FileNotFoundException e) {
+        log.error("File not found: ", e);
+    } catch (JSchException | SftpException e) {
+        log.error("Error occurred while transferring CSV files via SFTP", e);
+    } finally {
+        closeSftpSession(); // Ensure session is closed after transfer
+
+        // Delete the directory after successful transfer
+        if (latestDir != null && latestDir.exists()) {
+            deleteDirectory(latestDir);
+            log.info("Deleted temporary directory: " + latestDir.getName());
+        }
+    }
+}
+
+private File findLatestDirectory(File[] directories) {
+    File latestDir = null;
+    long latestModTime = Long.MIN_VALUE;
+
+    for (File dir : directories) {
+        if (dir.lastModified() > latestModTime) {
+            latestModTime = dir.lastModified();
+            latestDir = dir;
+        }
+    }
+    
+    if (latestDir != null) {
+        log.info("Latest directory found: " + latestDir.getName());
+    }
+    
+    return latestDir;
+}
+
+private void deleteDirectory(File directoryToBeDeleted) {
+    File[] allContents = directoryToBeDeleted.listFiles();
+    if (allContents != null) {
+        for (File file : allContents) {
+            deleteDirectory(file);
+        }
+    }
+    directoryToBeDeleted.delete();
+}
+
+==========================================================================
 package com.verizon.connect.activation.ssh.service;
 
 import java.io.File;
