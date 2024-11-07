@@ -1,3 +1,47 @@
+private String host;
+	private int port;
+	private String username;
+	private JSch jsch;
+	private ChannelSftp channel;
+	ChannelShell channelShell;
+	private Session session = null;
+
+public void authPassword(String password, String openChannel) throws JSchException {
+		session = jsch.getSession(username, host, port);
+		String decryptedPassword = decryptor(password);
+		Properties config = new Properties();
+		config.put("StrictHostKeyChecking", "no");
+		session.setConfig(config);
+		session.setPassword(decryptedPassword);
+		session.connect(SSHConstants.CONNECTION_TIMEOUT_MILLISEC);
+
+		if ("sftp".equalsIgnoreCase(openChannel)) {
+			channel = (ChannelSftp) session.openChannel(openChannel);
+			channel.connect();
+		} else {
+			channelShell = (ChannelShell) session.openChannel(openChannel);
+		}
+		log.info("jsch : {}, jschSession : {} created with host: {}, port : {} using username : {}", jsch.hashCode(),
+				session.hashCode(), host, port, username);
+	}
+
+public void setupSftpSession(String openChannel) {
+		try {
+			 session = jsch.getSession(username, host);
+			 
+			 Properties config = new Properties();
+			 config.put("StrictHostKeyChecking", "no");
+			 session.setConfig(config);
+			 
+			 session.connect();
+			 log.info("SFTP session created with host: {}, username: {}", host, username);
+		} catch (JSchException e) {
+			log.error("Error occurred while setting SFTP session", e);
+		} catch (Exception e) {
+			log.error("An unexpected error occured during file transfer", e);
+		}
+	}
+===================================================
 public void transferCsvFiles() {
     try {
         setupSftpSession(null, "sftp"); // Initialize session with sftp channel
