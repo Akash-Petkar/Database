@@ -1,3 +1,110 @@
+INSERT INTO infra.t_transform_mapping
+(api_name, source_system, request_template, response_template, additional_comments, is_active, created_by, creation_date, modified_by, last_modified_date, final_response_template)
+VALUES('CasperGORTrunkRequest', 'CASPER', '<#ftl ns_prefixes={
+    "soapenv":"http://schemas.xmlsoap.org/soap/envelope/",
+    "vzvoip":"http://vzvoip.verizon.com"
+}>
+{
+    "serviceOrder": {
+        "serviceOrderHeader": {
+            "flow": "Non-RIV",
+            "supp": "false",
+            "isSupp": "false",
+            "region": "US",
+            "product": "VOIP",
+            "orderType": "",
+            "minorOrderType":  "",
+            "serviceType": "CASPER_GOR_TRUNK",
+            "functionCode": "RELEASE",
+            "lineOfBusiness": "WHOLESALE_VOIP",
+            "workOrderNumber": "0",
+            "workOrderVersion": "0",
+            "originatingSystem": "CASPER",
+            "userContact": {}
+        },
+        "services": {
+            "commonSpecifications": {
+                "specification": [{
+                    "code": "TransactionId",
+                    "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["Header"]["TransactionId"]}"
+                }]
+            },
+            "convergedService": {
+                "serviceCapability": [
+                    {
+                        "entityType": "CASPER_GOR_TRUNK",
+                        "actionCode": "",
+                        "specification": [
+                            {
+                                "code": "Activity",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["Activity"]}"
+                            },
+                            {
+                                "code": "CLLI",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["CLLI"]}"
+                            },
+                            {
+                                "code": "CS2KCLLI",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["CS2KCLLI"]}"
+                            },
+                            {
+                                "code": "SLGTGN",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["SLGTGN"]}"
+                            },
+                            {
+                                "code": "TRUNK_ID",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["TrunkId"]}"
+                            },
+                            {
+                                "code": "C5TRUNK_ID",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["C5TRUNKID"]}"
+                            },
+                            {
+                                "code": "GOR",
+                                "value": "${xml["soapenv:Envelope"]["soapenv:Body"]["vzvoip:CasperGORTrunkRequest"]["GOR"]}"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}', '<#-- @ftlvariable name="JsonUtil" type="com.verizon.connect.infra.transform.util.JsonUtil" -->
+<#assign body = JsonUtil.jsonToMap(input)>
+<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzvoip.verizon.com">
+   <env:Body>
+		<ns0:CasperGORTrunkResponse>
+			<#if body.orderNumber??>
+			 	<#assign transaction_id = body.orderNumber>
+				<TransactionId>${transaction_id}</TransactionId>
+            <#else>
+				<TransactionId xsi:nil="0"/>
+            </#if>
+            <#if body.failureEntityDetails?? && body.failureEntityDetails.CASPER_GOR_TRUNK??>
+                <#assign casperTrunkRoutingList = body.failureEntityDetails.CASPER_GOR_TRUNK>
+                    <#list casperTrunkRoutingList as routingList>
+                        <#if routingList.failureParamDetails??>
+                            <#assign casperTrunkErrorsList = routingList.failureParamDetails>
+                                <#list casperTrunkErrorsList as rangeList>
+                                    <ErrorResponse>
+										<Field>${rangeList.paramName}</Field>
+										<ErrorDetails>
+											<code>${rangeList.code}</code>
+											<text>${rangeList.description}</text>
+										</ErrorDetails>
+                                     </ErrorResponse>
+                                </#list>
+                            <Status>Failure</Status>
+                        </#if>
+                    </#list>
+                <#else>
+                <Status>${body.status}</Status>
+            </#if>
+		</ns0:CasperGORTrunkResponse>
+   </env:Body>
+</env:Envelope>', NULL, true, 'flyway_app', CURRENT_TIMESTAMP, 'flyway_app', CURRENT_TIMESTAMP, NULL);
+=====================================================================
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vzvoip="http://vzvoip.verizon.com">
   <soap:Body>
     <vzvoip:CasperGORTrunkRequest>
