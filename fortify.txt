@@ -1,0 +1,323 @@
+</Description>
+            <IssueListing listing="true" limit="1">
+                <Refinement>[fortify priority order]:critical OR [fortify priority order]:high</Refinement>
+                <Chart chartType="list">
+                    <Axis>Category</Axis>
+                    <MajorAttribute>Analysis</MajorAttribute>
+                    <GroupingSection count="1">
+                        <groupTitle>Path Manipulation</groupTitle>
+                        <MajorAttributeSummary>
+                            <MetaInfo>
+<Name>Abstract</Name>
+<Value>Attackers can control the file system path argument to File() at CsvFileTransferService.java line 103, which allows them to access or modify otherwise protected files.</Value>
+                            </MetaInfo>
+                            <MetaInfo>
+<Name>Explanation</Name>
+<Value>Path manipulation errors occur when the following two conditions are met:
+
+1. An attacker can specify a path used in an operation on the file system.
+
+2. By specifying the resource, the attacker gains a capability that would not otherwise be permitted.
+
+For example, the program might give the attacker the ability to overwrite the specified file or run with a configuration controlled by the attacker.
+
+
+Example 1: The following code uses input from an HTTP request to create a file name. The programmer has not considered the possibility that an attacker could provide a file name such as "../../tomcat/conf/server.xml", which causes the application to delete one of its own configuration files.
+
+
+String rName = request.getParameter("reportName");
+File rFile = new File("/usr/local/apfr/reports/" + rName);
+...
+rFile.delete();
+
+
+Example 2: The following code uses input from a configuration file to determine which file to open and echo back to the user. If the program runs with adequate privileges and malicious users can change the configuration file, they can use the program to read any file on the system that ends with the extension .txt.
+
+
+fis = new FileInputStream(cfg.getProperty("sub")+".txt");
+amt = fis.read(arr);
+out.println(arr);
+
+
+Some think that in the mobile environment, classic vulnerabilities, such as path manipulation, do not make sense -- why would the user attack themself? However, keep in mind that the essence of mobile platforms is applications that are downloaded from various sources and run alongside each other on the same device. The likelihood of running a piece of malware next to a banking application is high, which necessitates expanding the attack surface of mobile applications to include inter-process communication.
+
+Example 3: The following code adapts Example 1 to the Android platform.
+
+
+...
+        String rName = this.getIntent().getExtras().getString("reportName");
+        File rFile = getBaseContext().getFileStreamPath(rName);
+...
+        rFile.delete();
+...
+</Value>
+                            </MetaInfo>
+                            <MetaInfo>
+<Name>Recommendations</Name>
+<Value>The best way to prevent path manipulation is with a level of indirection: create a list of legitimate values from which the user must select. With this approach, the user-provided input is never used directly to specify the resource name.
+
+In some situations this approach is impractical because the set of legitimate resource names is too large or too hard to maintain. Programmers often resort to implementing a deny list in these situations. A deny list is used to selectively reject or escape potentially dangerous characters before using the input. However, any such list of unsafe characters is likely to be incomplete and will almost certainly become out of date. A better approach is to create a list of characters that are permitted to appear in the resource name and accept input composed exclusively of characters in the approved set.</Value>
+                            </MetaInfo>
+                            <MetaInfo>
+<Name>Tips</Name>
+<Value>1. If the program performs custom input validation to your satisfaction, use the Fortify Custom Rules Editor to create a cleanse rule for the validation routine.
+
+2. Implementation of an effective deny list is notoriously difficult. One should be skeptical if validation logic requires implementing a deny list. Consider different types of input encoding and different sets of metacharacters that might have special meaning when interpreted by different operating systems, databases, or other resources. Determine whether or not the deny list can be updated easily, correctly, and completely if these requirements ever change.
+
+3. A number of modern web frameworks provide mechanisms to perform user input validation (including Struts and Spring MVC). To highlight the unvalidated sources of input, Fortify Secure Coding Rulepacks dynamically re-prioritize the issues Fortify Static Code Analyzer reports by lowering their probability of exploit and providing pointers to the supporting evidence whenever the framework validation mechanism is in use. We refer to this feature as Context-Sensitive Ranking. To further assist the Fortify user with the auditing process, the Fortify Software Security Research group makes available the Data Validation project template that groups the issues into folders based on the validation mechanism applied to their source of input.</Value>
+                            </MetaInfo>
+                            <AttributeValue>
+<Name>&lt;Unaudited&gt;</Name>
+<Count>1</Count>
+                            </AttributeValue>
+                            <AttributeValue>
+<Name>Not an Issue</Name>
+<Count>0</Count>
+                            </AttributeValue>
+                            <AttributeValue>
+<Name>Reliability Issue</Name>
+<Count>0</Count>
+                            </AttributeValue>
+                            <AttributeValue>
+<Name>Bad Practice</Name>
+<Count>0</Count>
+                            </AttributeValue>
+                            <AttributeValue>
+<Name>Suspicious</Name>
+<Count>0</Count>
+                            </AttributeValue>
+                            <AttributeValue>
+<Name>Exploitable</Name>
+<Count>0</Count>
+                            </AttributeValue>
+                        </MajorAttributeSummary>
+                        <Issue iid="530B00DE03773B898D966CA30EA1904F" ruleID="823FE039-A7FE-4AAD-B976-9EC53FFE4A59">
+                            <Category>Path Manipulation</Category>
+                            <Folder>High</Folder>
+                            <Kingdom>Input Validation and Representation</Kingdom>
+                            <Abstract>Attackers can control the file system path argument to File() at CsvFileTransferService.java line 103, which allows them to access or modify otherwise protected files.</Abstract>
+                            <Friority>High</Friority>
+                            <Primary>
+<FileName>CsvFileTransferService.java</FileName>
+<FilePath>java/com/verizon/connect/activation/ssh/service/CsvFileTransferService.java</FilePath>
+<LineStart>103</LineStart>
+<Snippet>	
+	public File getLatestCsvDirectory() {
+	    File tempDir = new File(System.getProperty("java.io.tmpdir"));
+	    File[] csvReportDirs = tempDir.listFiles((dir, name) -&gt; name.startsWith("csv_reports_") &amp;&amp; new File(dir, name).isDirectory());
+</Snippet>
+<TargetFunction>java.io.File.File()</TargetFunction>
+                            </Primary>
+                            <Source>
+<FileName>CsvFileTransferService.java</FileName>
+<FilePath>java/com/verizon/connect/activation/ssh/service/CsvFileTransferService.java</FilePath>
+<LineStart>103</LineStart>
+<Snippet>	
+	public File getLatestCsvDirectory() {
+	    File tempDir = new File(System.getProperty("java.io.tmpdir"));
+	    File[] csvReportDirs = tempDir.listFiles((dir, name) -&gt; name.startsWith("csv_reports_") &amp;&amp; new File(dir, name).isDirectory());
+</Snippet>
+<TargetFunction>java.lang.System.getProperty()</TargetFunction>
+                            </Source>
+                        </Issue>
+                    </GroupingSection>
+                </Chart>
+            </IssueListing>
+        </SubSection>
+    </ReportSection>
+    <ReportSection enabled="true" optionalSubsections="true">
+        <Title>Issue Count by Category</Title>
+        <SubSection enabled="true">
+            <Title>Issues By Category</Title>
+            <IssueListing listing="false" limit="-1">
+                <Refinement></Refinement>
+                <Chart chartType="table">
+                    <Axis>Category</Axis>
+                    <MajorAttribute>Analysis</MajorAttribute>
+                    <GroupingSection count="1">
+                        <groupTitle>Path Manipulation</groupTitle>
+                    </GroupingSection>
+                </Chart>
+            </IssueListing>
+        </SubSection>
+    </ReportSection>
+    <ReportSection enabled="true" optionalSubsections="true">
+        <Title>Issue Breakdown by Analysis</Title>
+        <SubSection enabled="true">
+            <Title>Issue by Analysis</Title>
+            <IssueListing listing="false" limit="-1">
+                <Refinement></Refinement>
+                <Chart chartType="pie">
+                    <Axis>Analysis</Axis>
+                    <MajorAttribute>Analysis</MajorAttribute>
+                    <GroupingSection count="1">
+                        <groupTitle>&lt;none&gt;</groupTitle>
+                    </GroupingSection>
+                </Chart>
+            </IssueListing>
+        </SubSection>
+    </ReportSection>
+</ReportDefinition>
+There are fortify issues
+Build step 'Execute shell' marked build as failure
+New run name is '3764-activn-ssh-service'
+[PostBuildScript] - [INFO] Executing post build scripts.
+[PostBuildScript] - [INFO] Build does not have any of the results [SUCCESS]. Did not execute build step #0.
+Notifying upstream projects of job completion
+Join notifier cannot find upstream project: NTS.E0SV.CONNECT_JENKINS.K8S/NTS.E0SV.CONNECT_K8S_SERVICE.MR-OnePieline-Build
+Finished: FAILURE
+
+===========================================================
+package com.verizon.connect.activation.ssh.service;
+
+import java.io.File;
+import java.util.Properties;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.ChannelShell;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+import com.verizon.connect.activation.ssh.constants.SSHConstants;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Component
+public class CsvFileTransferService {
+
+	@Value("${cssop.host}")
+	String host;
+	
+	@Value("${cssop.username}")
+	String username;
+	
+	@Value("${cssop.remoteFilePath}")
+	String remoteFilePath;
+
+	private JSch jsch;
+	private Session session;
+	private ChannelSftp channel;
+	ChannelShell channelShell;
+	
+	public CsvFileTransferService() {
+		this.jsch = new JSch();
+	}
+	
+	public void transferCsvFiles() {
+	    try {
+	        setupSftpSession("sftp"); 
+
+	        File latestDir = getLatestCsvDirectory();
+	        if (latestDir == null) {
+	            log.info("No directories found matching 'csv_reports_' pattern in /tmp.");
+	            return;
+	        }
+
+	        File[] csvFiles = getCsvFilesInDirectory(latestDir);
+	        if (csvFiles == null || csvFiles.length == 0) {
+	            log.info("No CSV files found in the directory: " + latestDir.getName());
+	        } else {
+	            transferFiles(csvFiles, latestDir);
+	            deleteDirectory(latestDir); 
+	            log.info("Deleted temporary directory: " + latestDir.getName());
+	        }
+
+	    } catch (SftpException e) {
+	        log.error("Error occurred while transferring CSV files via SFTP", e);
+	    } catch (Exception e) {
+	        log.error("Error occurred in CsvFileTransferService", e);
+	    } finally {
+	        closeSftpSession();
+	    }
+	}
+	
+	public void setupSftpSession(String openChannel) {
+		try {
+			 session = jsch.getSession(username, host);
+			 
+			 Properties config = new Properties();
+			 config.put("StrictHostKeyChecking", "no");
+			 session.setConfig(config);		 
+			 session.connect(SSHConstants.CONNECTION_TIMEOUT_MILLISEC);
+			 
+			 if ("sftp".equalsIgnoreCase(openChannel)) {
+					channel = (ChannelSftp) session.openChannel(openChannel);
+					channel.connect();
+				} else {
+					channelShell = (ChannelShell) session.openChannel(openChannel);
+				}		 
+			 log.info("SFTP session created with host: {}, username: {}", host, username);
+		} catch (JSchException e) {
+			log.error("Error occurred while setting SFTP session", e);
+		} catch (Exception e) {
+			log.error("An unexpected error occured during file transfer", e);
+		}
+	}
+	
+	public void closeSftpSession() {
+		if(channel != null && channel.isConnected()) {
+			channel.disconnect();
+		}
+		if(session != null && session.isConnected()) {
+			session.disconnect();
+		}
+		log.info("SFTP session closed.");
+	}
+	
+	public File getLatestCsvDirectory() {
+	    File tempDir = new File(System.getProperty("java.io.tmpdir"));
+	    File[] csvReportDirs = tempDir.listFiles((dir, name) -> name.startsWith("csv_reports_") && new File(dir, name).isDirectory());
+
+	    if (csvReportDirs == null || csvReportDirs.length == 0) {
+	        return null;
+	    }
+
+	    return findLatestDirectory(csvReportDirs);
+	}
+	
+	public File findLatestDirectory(File[] directories) {
+		File latestDir = null;
+		long latestModTime = Long.MIN_VALUE;
+		
+		for(File dir:directories) {
+			if(dir.lastModified() > latestModTime) {
+				latestModTime = dir.lastModified();
+				latestDir = dir;
+			}
+		}
+		
+		if(latestDir != null) {
+			log.info("Latest directory found: "+ latestDir.getName());
+		}
+		return latestDir;
+	}
+	
+	public File[] getCsvFilesInDirectory(File directory) {
+	    return directory.listFiles((dir, name) -> name.endsWith(".csv"));
+	}
+	
+	public void transferFiles(File[] csvFiles, File directory) throws SftpException {
+	    for (File csvFile : csvFiles) {
+	        String fileName = csvFile.getName();
+	        log.info("Uploading file: " + fileName + " from directory: " + directory.getName());
+	        channel.put(csvFile.getAbsolutePath(), remoteFilePath + "/" + fileName);
+	    }
+	}
+	
+	public void deleteDirectory(File directoryToBeDeleted) {
+	    File[] allContents = directoryToBeDeleted.listFiles();
+	    if (allContents != null) {
+	        for (File file : allContents) {
+	            deleteDirectory(file);
+	        }
+	    }
+	    if(!directoryToBeDeleted.delete()) {
+	    	log.info("Failed to delete: "+ directoryToBeDeleted.getAbsolutePath());
+	    }
+	}
+}
