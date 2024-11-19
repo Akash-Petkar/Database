@@ -1,0 +1,883 @@
+<#ftl ns_prefixes={
+"soapenv":"http://schemas.xmlsoap.org/soap/envelope/",
+"vzv":"http://vzvoip.verizon.com"}>
+{
+    "header": {
+        "apiname": "ModifyLocation",
+        "originatingSystem": "CSSOP",
+        "specifications": [{
+            "specCode": "TransactionID",
+            "specValue": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.TransactionID}"
+        },
+        {
+            "specCode": "SummaryContextID",
+            "specValue": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.SummaryContextID}"
+        },
+        {
+            "specCode": "OriginatingSystem",
+            "specValue": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.OriginatingSystem}"
+        },
+        {
+            "specCode": "TransactionDate",
+            "specValue": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.TransactionDate}"
+        }]
+    },
+   "rawBusinessRequest":{
+   "serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-TSO",
+			"supp": "false",
+			"isSupp": "false",
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Trunking",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.TransactionID}",
+			"workOrderVersion": "0",
+			"originatingSystem": "CSSOP",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+    "services": {
+            "commonSpecifications": {
+                "specification": [
+					{
+						"code":"EnterpriseId",
+						"value": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].LocationInput.Location.EnterpriseID}"
+					},
+					{
+						"code": "API_NAME",
+						"value": "modifyLocation"
+					},
+					{
+						"code": "SummaryContextID",
+						"value": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].RequestHeader.SummaryContextID}"
+					},
+					{
+						"code":"REQUEST_ID",
+						"value": "${xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].LocationInput.RequestID}"
+					}
+                 ]
+              },
+
+	"convergedService": {
+		"serviceCapability": [
+				<#assign LocationInput=xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].LocationInput>
+				<#assign Location=xml["soapenv: Envelope"]["soapenv: Body"]["vzv: ModifyLocation"].LocationInput.Location>
+				{
+				"entityType": "LOCATION",
+				"actionCode": "CHANGE",
+				"specification": 
+					[
+						{
+						"code":"RequestID",
+						"value":"${LocationInput.RequestID}"
+						},
+						{
+						"code": "CreatedBy",
+						"value": "${Location.Header.CreatedBy}"
+						},
+						{
+						"code": "CreatedDate",
+						"value": "${Location.Header.CreatedDate}"
+						},
+						{
+						"code": "UpdatedBy",
+						"value": "${Location.Header.UpdatedBy}"
+						},
+						{
+						"code": "UpdatedDate",
+						"value": "${Location.Header.UpdatedDate}"
+						},
+						{
+						"code": "UpdatedDate",
+						"value": "${Location.Header.UpdatedDate}"
+						}
+						<#if Location.EnterpriseID?has_content && Location.EnterpriseID?trim !=''>
+						,{
+							"code":"EnterpriseID",
+							"value": "${Location.EnterpriseID}"
+						}
+						</#if>
+						<#if Location.LocationID?has_content && Location.LocationID?trim !=''>
+						,{
+							"code":"LocationID",
+							"value": "${Location.LocationID}"
+						}
+						</#if>
+						<#if Location.LocationName?has_content && Location.LocationName?trim !=''>
+						,{
+							"code":"LocationName",
+							"value": "${Location.LocationName}"
+						}
+						</#if>
+						<#if Location.SIPDomain?has_content && Location.SIPDomain?trim !=''>
+						,{
+							"code":"SIPDomain",
+							"value": "${Location.SIPDomain}"
+						}
+						</#if>
+						<#if Location.AbbreviatedDialing?has_content && Location.AbbreviatedDialing?trim !=''>
+						,{
+							"code":"AbbreviatedDialing",
+							"value": "${Location.AbbreviatedDialing}"
+						}
+						</#if>
+						<#if Location.ExtensionLength?has_content && Location.ExtensionLength?trim !=''>
+						,{
+							"code":"ExtensionLength",
+							"value": "${Location.ExtensionLength}"
+						}
+						</#if>
+						<#if Location.LinePortLength?has_content && Location.LinePortLength?trim !=''>
+						,{
+							"code":"LinePortLength",
+							"value": "${Location.LinePortLength}"
+						}
+						</#if>
+						<#if Location.PrivateNumberLength?has_content && Location.PrivateNumberLength?trim !=''>
+						,{
+							"code":"PrivateNumberLength",
+							"value": "${Location.PrivateNumberLength}"
+						}
+						</#if>
+						<#if Location.TotalSubscribers?has_content && Location.TotalSubscribers?trim !=''>
+						,{
+							"code":"TotalSubscribers",
+							"value": "${Location.TotalSubscribers}"
+						}
+						</#if>
+						<#if Location.TotalVoiceMailAccts?has_content && Location.TotalVoiceMailAccts?trim !=''>
+						,{
+							"code":"TotalVoiceMailAccts",
+							"value": "${Location.TotalVoiceMailAccts}"
+						}
+						</#if>
+						<#if Location.TotalPublicNumbers?has_content && Location.TotalPublicNumbers?trim !=''>
+						,{
+							"code":"TotalPublicNumbers",
+							"value": "${Location.TotalPublicNumbers}"
+						}
+						</#if>
+						<#if Location.MarketType?has_content && Location.MarketType?trim !=''>
+						,
+						{
+							"code":"MarketType",
+							<#if Location.MarketType == 'ASIAPAC'>
+							"value": "APAC"
+							<#else>
+							"value": "${Location.MarketType}"
+							</#if>
+						}
+						</#if>
+						<#if Location.VoipServiceType?has_content && Location.VoipServiceType?trim !=''>
+						,{
+							"code":"VoipServiceType",
+							"value": "${Location.VoipServiceType}"
+						}
+						</#if>
+						<#if Location.HybridServiceType?has_content && Location.HybridServiceType?trim !=''>
+						,{
+							"code":"HybridServiceType",
+							"value": "${Location.HybridServiceType}"
+						}
+						</#if>
+						<#if Location.ServiceLevel?has_content && Location.ServiceLevel?trim !=''>
+						,{
+							"code":"ServiceLevel",
+							"value": "${Location.ServiceLevel}"
+						}
+						</#if>
+						<#if Location.SBCEnabled?has_content && Location.SBCEnabled?trim !=''>
+						,{
+							"code":"SBCEnabled",
+							"value": "${Location.SBCEnabled}"
+						}
+						</#if>
+						<#if Location.OutboundProxy?has_content && Location.OutboundProxy?trim !=''>
+						,{
+							"code":"OutboundProxy",
+							"value": "${Location.OutboundProxy}"
+						}
+						</#if>
+						<#if Location.ProxyIPAddress?has_content && Location.ProxyIPAddress?trim !=''>
+						,{
+							"code":"ProxyIPAddress",
+							"value": "${Location.ProxyIPAddress}"
+						}
+						</#if>
+						<#if Location.ProxyPort?has_content && Location.ProxyPort?trim !=''>
+						,{
+							"code":"ProxyPort",
+							"value": "${Location.ProxyPort}"
+						}
+						</#if>
+						<#if Location.OffLocCCL?has_content && Location.OffLocCCL?trim !=''>
+						,{
+							"code":"offlocCCl",
+							"value": "${Location.OffLocCCL}"
+						}
+						</#if>
+						<#if Location.OffNetCCL?has_content && Location.OffNetCCL?trim !=''>
+						,{
+							"code":"OffnetCCl",
+							"value": "${Location.OffNetCCL}"
+						}
+						</#if>
+						<#if Location.LocInboundCCL?has_content && Location.LocInboundCCL?trim !=''>
+						,{
+							"code":"LocInboundCCL",
+							"value": "${Location.LocInboundCCL}"
+						}
+						</#if>
+						<#if Location.LocSigCCL?has_content && Location.LocSigCCL?trim !=''>
+						,{
+							"code":"LocSigCCL",
+							"value": "${Location.LocSigCCL}"
+						}
+						</#if>
+						<#if Location.CircuitID?has_content && Location.CircuitID?trim !=''>
+						,{
+							"code":"CircuitID",
+							"value": "${Location.CircuitID}"
+						}
+						</#if>
+						<#if Location.BillID?has_content && Location.BillID?trim !=''>
+						,{
+							"code":"BillID",
+							"value": "${Location.BillID}"
+						}
+						</#if>
+						<#if Location.NPANXX?has_content && Location.NPANXX?trim !=''>
+						,{
+							"code":"NPANXX",
+							"value": "${Location.NPANXX}"
+						}
+						</#if>
+						<#if Location.TimeZone?has_content && Location.TimeZone?trim !=''>
+						,{
+							"code":"TimeZone",
+							"value": "${Location.TimeZone}"
+						}
+						</#if>
+						<#if Location.DaylightSavingInd?has_content && Location.DaylightSavingInd?trim !=''>
+						,{
+							"code":"DaylightSavingInd",
+							"value": "${Location.DaylightSavingInd}"
+						}
+						</#if>
+						<#if Location.Managed?has_content && Location.Managed?trim !=''>
+						,{
+							"code":"Managed",
+							"value": "${Location.Managed}"
+						}
+						</#if>
+						<#if Location.ConvergedIP?has_content && Location.ConvergedIP?trim !=''>
+						,{
+							"code":"ConvergedIP",
+							"value": "${Location.ConvergedIP}"
+						}
+						</#if>
+						<#if Location.VoicemailLanguage?has_content && Location.VoicemailLanguage?trim !=''>
+						,{
+							"code":"VoicemailLanguage",
+							"value": "${Location.VoicemailLanguage}"
+						}
+						</#if>
+						<#if Location.WebLanguage?has_content && Location.WebLanguage?trim !=''>
+						,{
+							"code":"WebLanguage",
+							"value": "${Location.WebLanguage}"
+						}
+						</#if>
+						<#if Location.VMType?has_content && Location.VMType?trim !=''>
+						,{
+							"code":"VMType",
+							<#if Location.VMType == 'HOSTED' || Location.VMType == 'Hosted'>
+							"value": "1"
+							<#elseif Location.VMType == 'PREMISE' || Location.VMType == 'Premise'>
+							"value": "2"
+							<#else>
+							"value": "${Location.VMType}"
+							</#if>
+						}
+						</#if>
+						<#if Location.PremiseVMAddr?has_content && Location.PremiseVMAddr?trim !=''>
+						,{
+							"code":"PremiseVMAddr",
+							"value": "${Location.PremiseVMAddr}"
+						}
+						</#if>
+						<#if Location.RPID?has_content && Location.RPID?trim !=''>
+						,{
+							"code":"RPID",
+							"value": "${Location.RPID}"
+						}
+						</#if>
+						<#if Location.CIDOverride?has_content && Location.CIDOverride?trim !=''>
+						,{
+							"code":"CIDOverride",
+							"value": "${Location.CIDOverride}"
+						}
+						</#if>
+						<#if Location.CNAMOverride?has_content && Location.CNAMOverride?trim !=''>
+						,{
+							"code":"CNAMOverride",
+							"value": "${Location.CNAMOverride}"
+						}
+						</#if>
+						<#if Location.EmergencyCID?has_content && Location.EmergencyCID?trim !=''>
+						,{
+							"code":"EmergencyCID",
+							"value": "${Location.EmergencyCID}"
+						}
+						</#if>
+						<#if Location.NetcomSvcID?has_content && Location.NetcomSvcID?trim !=''>
+						,{
+							"code":"NetcomSvcID",
+							"value": "${Location.NetcomSvcID}"
+						}
+						</#if>
+						<#if Location.AddressLine1?has_content && Location.AddressLine1?trim !=''>
+						,{
+							"code":"AddressLine1",
+							"value": "${Location.AddressLine1}"
+						}
+						</#if>
+						<#if Location.City?has_content && Location.City?trim !=''>
+						,{
+							"code":"City",
+							"value": "${Location.City}"
+						}
+						</#if>
+						<#if Location.State?has_content && Location.State?trim !=''>
+						,{
+							"code":"State",
+							"value": "${Location.State}"
+						}
+						</#if>
+						<#if Location.Zip?has_content && Location.Zip?trim !=''>
+						,{
+							"code":"Zip",
+							"value": "${Location.Zip}"
+						}
+						</#if>
+						<#if Location.Country?has_content && Location.Country?trim !=''>
+						,{
+							"code":"Country",
+							"value": "${Location.Country}"
+						}
+						</#if>
+						<#if Location.CountryCode?has_content && Location.CountryCode?trim !=''>
+						,{
+							"code":"CountryCode",
+							"value": "${Location.CountryCode}"
+						}
+						</#if>
+						<#if Location.Region?has_content && Location.Region?trim !=''>
+						,{
+							"code":"Region",
+							"value": "${Location.Region}"
+						}
+						</#if>
+						<#if Location.ContactPhone1?has_content && Location.ContactPhone1?trim !=''>
+						,{
+							"code":"ContactPhone1",
+							"value": "${Location.ContactPhone1}"
+						}
+						</#if>
+						<#if Location.CLIDNumber?has_content && Location.CLIDNumber?trim !=''>
+						,{
+							"code":"CLIDNumber",
+							"value": "${Location.CLIDNumber}"
+						}
+						</#if>
+						<#if Location.CNAMCompletionStatus?has_content && Location.CNAMCompletionStatus?trim !=''>
+						,{
+							"code":"CNAMCompletionStatus",
+							"value": "${Location.CNAMCompletionStatus}"
+						}
+						</#if>
+						<#if Location.CNAMUpdateDate?has_content && Location.CNAMUpdateDate?trim !=''>
+						,{
+							"code":"CNAMUpdateDate",
+							"value": "${Location.CNAMUpdateDate}"
+						}
+						</#if>
+						<#if Location.FMCg?has_content && Location.FMCg?trim !=''>
+						,{
+							"code":"FMCg",
+							"value": "${Location.FMCg}"
+						}
+						</#if>
+						<#if Location.AccessType?has_content && Location.AccessType?trim !=''>
+						,{
+							"code":"AccessType",
+							"value": "${Location.AccessType}"
+						}
+						</#if>
+						<#if Location.CNAMELocInd?has_content && Location.CNAMELocInd?trim !=''>
+						,{
+							"code":"CNAMELocInd",
+							<#if Location.CNAMELocInd == 'Yes' || Location.CNAMELocInd == 'YES'>
+							"value": "true"
+							<#elseif Location.CNAMELocInd == 'NO' || Location.CNAMELocInd == 'No'>
+							"value": "false"
+							<#else>
+							"value": "${Location.CNAMELocInd}"
+							</#if>
+						}
+						</#if>
+						<#if Location.UnscreenedANI?has_content && Location.UnscreenedANI?trim !=''>
+						,{
+							"code":"UnscreenedANI",
+							"value": "${Location.UnscreenedANI}"
+						}
+						</#if>
+						<#if Location.ScreenedTN?has_content && Location.ScreenedTN?trim !=''>
+						,{
+							"code":"ScreenedTN",
+							"value": "${Location.ScreenedTN}"
+						}
+						</#if>
+						<#if Location.LocationDesign?has_content && Location.LocationDesign?trim !=''>
+						,{
+							"code":"LocationDesign",
+							"value": "${Location.LocationDesign}"
+						}
+						</#if>
+						<#if Location.FQDN?has_content && Location.FQDN?trim !=''>
+						,{
+							"code":"FQDN",
+							"value": "${Location.FQDN}"
+						}
+						</#if>
+						<#if Location.GenerateConfig?has_content && Location.GenerateConfig?trim !=''>
+						,{
+							"code":"GenerateConfig",
+							"value": "${Location.GenerateConfig}"
+						}
+						</#if>
+						<#if Location.AlternativeCallerIDEnabled?has_content && Location.AlternativeCallerIDEnabled?trim !=''>
+						,
+						{
+							"code":"AlternativeCallerIDEnabled",
+							<#if Location.AlternativeCallerIDEnabled == 'Yes' || Location.AlternativeCallerIDEnabled == 'YES'>
+							"value": "ON"
+							<#elseif Location.AlternativeCallerIDEnabled == 'NO' || Location.AlternativeCallerIDEnabled == 'No'>
+							"value": "OFF"
+							<#else>
+							"value": "${Location.AlternativeCallerIDEnabled}"
+							</#if>
+						}
+						</#if>
+						<#if Location.SubAgencyHierCode?has_content && Location.SubAgencyHierCode?trim !=''>
+						,{
+							"code":"SubAgencyHierCode",
+							"value": "${Location.SubAgencyHierCode}"
+						}
+						</#if>
+						<#if Location.BillingActivated?has_content && Location.BillingActivated?trim !=''>
+						,{
+							"code":"BillingActivated",
+							"value": "${Location.BillingActivated}"
+						}
+						</#if>
+						<#if Location.CallForwardingPlanName?has_content && Location.CallForwardingPlanName?trim !=''>
+						,{
+							"code":"CallForwardingPlanName",
+							"value": "${Location.CallForwardingPlanName}"
+						}
+						</#if>
+						<#if Location.EnterpriseTrunkId?has_content && Location.EnterpriseTrunkId?trim !=''>
+						,{
+							"code":"EnterpriseTrunkId",
+							"value": "${Location.EnterpriseTrunkId}"
+						}
+						</#if>
+						<#if Location.VOVIndicator?has_content && Location.VOVIndicator?trim !=''>
+						,{
+							"code":"VOVIndicator",
+							"value": "${Location.VOVIndicator}"
+						}
+						</#if>
+						<#if Location.LocCCLInd?has_content && Location.LocCCLInd?trim !=''>
+						,{
+							"code":"LocCCLInd",
+							"value": "${Location.LocCCLInd}"
+						}
+						</#if>
+						<#if Location.ViperEnabled?has_content && Location.ViperEnabled?trim !=''>
+						,{
+							"code":"ViperEnabled",
+							"value": "${Location.ViperEnabled}"
+						}
+						</#if>
+						<#if Location.BillType?has_content && Location.BillType?trim !=''>
+						,{
+							"code":"BillType",
+							"value": "${Location.BillType}"
+						}
+						</#if>
+						<#if Location.CircuitId?has_content && Location.CircuitId?trim !=''>
+						,{
+							"code":"CircuitId",
+							"value": "${Location.CircuitId}"
+						}
+						</#if>
+						<#if Location.NcarId?has_content && Location.NcarId?trim !=''>
+						,{
+							"code":"NcarId",
+							"value": "${Location.NcarId}"
+						}
+						</#if>
+					]
+				}
+			]}
+		}
+	  }
+   }
+}
+
+===================================================================
+<#ftl ns_prefixes={
+"S":"http://schemas.xmlsoap.org/soap/envelope/",
+"ns2":"http://vzvoip.verizon.com"}>
+{
+    "header": {
+        "apiname": "ModifyCallingPlan",
+        "originatingSystem": "CSSOP",
+        "specifications": [{
+            "specCode": "TransactionID",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionID}"
+        },
+        {
+            "specCode": "SummaryContextID",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.SummaryContextID}"
+        },
+        {
+            "specCode": "OriginatingSystem",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.OriginatingSystem}"
+        },
+        {
+            "specCode": "TransactionDate",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionDate}"
+        }]
+    },
+   "rawBusinessRequest":{
+   "serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-TSO",
+			"supp": "false",
+			"isSupp": "false",
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Integrated Access",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionID}",
+			"workOrderVersion": "0",
+			"originatingSystem": "CSSOP",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+    "services": {
+            "commonSpecifications": {
+                "specification": [
+					{
+						"code": "API_NAME",
+						"value": "modifyCallingPlan"
+					},
+					{
+						"code":"REQUEST_ID",
+						"value": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].CallingPlanInput.RequestID}"
+					},
+					{
+						"code": "SummaryContextID",
+						"value": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.SummaryContextID}"
+					}
+                 ]
+              },
+
+	"convergedService": {
+		"serviceCapability": [
+				<#assign callingPlanCallTypeMap = {
+				"Deny" : "0",
+				"Allow" : "1",
+				"Transfer1" : "2",
+				"Transfer2" : "3",
+				"Transfer3" : "4",
+				"Authorize" : "5",
+				"Authorise" : "5",
+				"Yes" : "1",
+				"" : ""
+				}>
+				
+				<#assign CallingPlanInput=xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].CallingPlanInput>
+				<#assign size = CallingPlanInput.CallingPlan?size>
+				<#list CallingPlanInput.CallingPlan as CallingPlan>
+				{
+				"entityType": "LOCATION",
+				"actionCode": "CHANGE",
+				"entityTypeId": "${CallingPlan?index}",
+				"specification": 
+					[
+						{
+							"code": "createdBy",
+							"value": "${CallingPlan.Header.CreatedBy}"
+						},
+						{
+							"code": "createdDate",
+							"value": "${CallingPlan.Header.CreatedDate}"
+						},
+						{
+							"code": "updatedBy",
+							"value": "${CallingPlan.Header.UpdatedBy}"
+						},
+						{
+							"code": "updatedDate",
+							"value": "${CallingPlan.Header.UpdatedDate}"
+						},
+						{
+							"code": "departmentId",
+							"value": "${CallingPlan.DepartmentID}"
+						},
+						{
+							"code": "locationId",
+							"value": "${CallingPlan.LocationID}"
+						},
+						{
+							"code": "callingPlanId",
+							"value": "${CallingPlan.CallingPlanID}"
+						},
+						{
+							"code": "callingPlanName",
+							"value": "${CallingPlan.CallingPlanName}"
+						},
+						{
+							"code": "iIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.IntraLocation}"]}"
+						},
+						{
+							"code": "iInterLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.InterLocation}"]}"
+						},
+						{
+							"code": "iCollectCalls",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.CollectCalls}"]}"
+						},						
+						{
+							"code": "oIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.IntraLocation}"]}"
+						},
+						{
+							"code": "oLocal",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Local}"]}"
+						},
+						{
+							"code": "oTollFree",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.TollFree}"]}"
+						},
+						{
+							"code": "oToll",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Toll}"]}"
+						},
+						{
+							"code": "oInternational",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.International}"]}"
+						},
+						{
+							"code": "oCasual",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Casual}"]}"
+						},
+						{
+							"code": "oOperatorAssisted",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.OperatorAssisted}"]}"
+						},
+						{
+							"code": "oChargedDirAssist",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ChargeableDirectoryAssist}"]}"
+						},
+						{
+							"code": "oSplServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.SpecialServices1}"]}"
+						},
+						{
+							"code": "oSplServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.SpecialServices2}"]}"
+						},
+						{
+							"code": "oPrmServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.PremiumServices1}"]}"
+						},
+						{
+							"code": "oPrmServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.PremiumServices2}"]}"
+						},
+						{
+							"code": "oUrlDialing",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.URLDialing}"]}"
+						},
+						{
+							"code": "oUnknown",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Unknown}"]}"
+						},
+						{
+							"code": "fIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.IntraLocation}"]}"
+						},
+						{
+							"code": "fLocal",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Local}"]}"
+						},
+						{
+							"code": "fTollFree",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.TollFree}"]}"
+						},
+						{
+							"code": "fToll",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Toll}"]}"
+						},
+						{
+							"code": "fInternational",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.International}"]}"
+						},
+						{
+							"code": "fCasual",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Casual}"]}"
+						},
+						{
+							"code": "fOperatorAssisted",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.OperatorAssisted}"]}"
+						},
+						{
+							"code": "fChargedDirAssist",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.ChargeableDirectoryAssist}"]}"
+						},
+						{
+							"code": "fSplServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.SpecialServices1}"]}"
+						},
+						{
+							"code": "fSplServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.SpecialServices2}"]}"
+						},
+						{
+							"code": "fPrmServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.PremiumServices1}"]}"
+						},
+						{
+							"code": "fPrmServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.PremiumServices2}"]}"
+						},
+						{
+							"code": "fUrlDialing",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.URL}"]}"
+						},
+						{
+							"code": "fUnknown",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Unknown}"]}"
+						},
+						{
+							"code": "bInterLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.BeingForwardedTransferred.InterLocation}"]}"
+						},
+						{
+							"code": "active",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Active}"]}"							         
+						},
+						{
+							"code": "tn1",
+							"value": "${CallingPlan.TransferNumber.TN1}"
+						},
+						{
+							"code": "tn2",
+							"value": "${CallingPlan.TransferNumber.TN2}"
+						},
+						{
+							"code": "tn3",
+							"value": "${CallingPlan.TransferNumber.TN3}"
+						},
+						${getDigitStrings(CallingPlan)}
+					]
+				}
+				<#if CallingPlan?index lt (size -1)>
+				,
+				</#if>
+			</#list>
+			]}
+		}
+	  }
+   }
+}
+
+<#function getDigitStrings CallingPlan >
+	<#local uniqueDigitStrings = []>
+	<#assign digitStrings = []/>
+		<#list CallingPlan as CP>
+			<#list CP.Incoming.DigitString as IDS>
+				<#assign incomingDigitStrings = IDS.value>
+				<#assign incomingDigitStringAction = IDS.action>
+				<#if incomingDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(incomingDigitStrings)>
+						<#local uniqueDigitStrings += [incomingDigitStrings]>
+					</#if>
+					<#if incomingDigitStringAction?has_content>
+						<#assign incomingObject = "{\"code\":\"idigitString${incomingDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${incomingDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [incomingObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.DigitString as ODS>
+				<#assign outgoingDigitStrings = ODS.value>
+				<#assign outgoingDigitStringAction = ODS.action>
+				<#if outgoingDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(outgoingDigitStrings)>
+						<#local uniqueDigitStrings += [outgoingDigitStrings]>
+					</#if>
+					<#if outgoingDigitStringAction?has_content>
+						<#assign outgoingObject = "{\"code\":\"odigitString${outgoingDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${outgoingDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [outgoingObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.ForwardingTransferring.DigitString as FTDS>
+				<#assign fwdDigitStrings = FTDS.value>
+				<#assign fwdDigitStringAction = FTDS.action>
+				<#if fwdDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(fwdDigitStrings)>
+						<#local uniqueDigitStrings += [fwdDigitStrings]>
+					</#if>
+					<#if fwdDigitStringAction?has_content>
+						<#assign fwdObject = "{\"code\":\"fdigitString${fwdDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${fwdDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [fwdObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.BeingForwardedTransferred.DigitString as BFDS>
+				<#assign beingFwdDigitStrings = BFDS.value>
+				<#assign beingFwdDigitStringAction = BFDS.action>
+				<#if beingFwdDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(beingFwdDigitStrings)>
+						<#local uniqueDigitStrings += [beingFwdDigitStrings]>
+					</#if>
+					<#if beingFwdDigitStringAction?has_content>
+						<#assign beingFwdObject = "{\"code\":\"bdigitString${beingFwdDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${beingFwdDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [beingFwdObject]>
+					</#if>
+				</#if>
+			</#list>	
+		</#list>
+		<#assign ds = "{\"code\":\"digitString\",\"value\":\"${uniqueDigitStrings?join(\",\")}\"}">
+		<#assign digitStrings += [ds]>
+	<#return digitStrings?join(",")>
+</#function>
