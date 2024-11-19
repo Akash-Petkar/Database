@@ -1,3 +1,12 @@
+<#if !hasDigitStrings && (
+            (CallingPlan.Incoming.DigitString?has_content && CallingPlan.Incoming.DigitString?size > 0) ||
+            (CallingPlan.Outgoing.DigitString?has_content && CallingPlan.Outgoing.DigitString?size > 0) ||
+            (CallingPlan.Outgoing.ForwardingTransferring.DigitString?has_content && CallingPlan.Outgoing.ForwardingTransferring.DigitString?size > 0) ||
+            (CallingPlan.Outgoing.BeingForwardedTransferred.DigitString?has_content && CallingPlan.Outgoing.BeingForwardedTransferred.DigitString?size > 0)
+        )>
+            <#assign hasDigitStrings = true>
+        </#if>
+===============================================================
 <?xml version='1.0' encoding='UTF-8'?>
 <S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
     <SOAP-ENV:Header>
