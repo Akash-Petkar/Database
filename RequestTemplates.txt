@@ -1,4 +1,413 @@
 <#ftl ns_prefixes={
+"S":"http://schemas.xmlsoap.org/soap/envelope/",
+"ns2":"http://vzvoip.verizon.com"}>
+{
+    "header": {
+        "apiname": "ModifyCallingPlan",
+        "originatingSystem": "CSSOP",
+        "specifications": [{
+            "specCode": "TransactionID",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionID}"
+        },
+        {
+            "specCode": "SummaryContextID",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.SummaryContextID}"
+        },
+        {
+            "specCode": "OriginatingSystem",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.OriginatingSystem}"
+        },
+        {
+            "specCode": "TransactionDate",
+            "specValue": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionDate}"
+        }]
+    },
+   "rawBusinessRequest":{
+   "serviceOrder": {
+		"serviceOrderHeader": {
+			"flow": "VRD-TSO",
+			"supp": "false",
+			"isSupp": "false",
+			"region": "US",
+			"product": "VOIP",
+			"orderType": "CHANGE",
+			"serviceType": "IP Integrated Access",
+			"functionCode": "RELEASE",
+			"lineOfBusiness": "RETAIL_VOIP",
+			"workOrderNumber": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.TransactionID}",
+			"workOrderVersion": "0",
+			"originatingSystem": "CSSOP",
+			"userContact": {
+				"id": "CSSOP",
+				"firstName": "CSSOP",
+				"lastName": "CSSOP"
+			}
+		},
+    "services": {
+            "commonSpecifications": {
+                "specification": [
+					{
+						"code": "API_NAME",
+						"value": "modifyCallingPlan"
+					},
+					{
+						"code":"REQUEST_ID",
+						"value": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].CallingPlanInput.RequestID}"
+					},
+					{
+						"code": "SummaryContextID",
+						"value": "${xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].RequestHeader.SummaryContextID}"
+					}
+                 ]
+              },
+
+	"convergedService": {
+		"serviceCapability": [
+				<#assign callingPlanCallTypeMap = {
+				"Deny" : "0",
+				"Allow" : "1",
+				"Transfer1" : "2",
+				"Transfer2" : "3",
+				"Transfer3" : "4",
+				"Authorize" : "5",
+				"Authorise" : "5",
+				"Yes" : "1",
+				"" : ""
+				}>
+				
+				<#assign CallingPlanInput=xml["S: Envelope"]["S: Body"]["ns2: ModifyCallingPlan"].CallingPlanInput>
+				<#assign size = CallingPlanInput.CallingPlan?size>
+				<#list CallingPlanInput.CallingPlan as CallingPlan>
+				{
+				"entityType": "LOCATION",
+				"actionCode": "CHANGE",
+				"entityTypeId": "${CallingPlan?index}",
+				"specification": 
+					[
+						{
+							"code": "createdBy",
+							"value": "${CallingPlan.Header.CreatedBy}"
+						},
+						{
+							"code": "createdDate",
+							"value": "${CallingPlan.Header.CreatedDate}"
+						},
+						{
+							"code": "updatedBy",
+							"value": "${CallingPlan.Header.UpdatedBy}"
+						},
+						{
+							"code": "updatedDate",
+							"value": "${CallingPlan.Header.UpdatedDate}"
+						},
+						{
+							"code": "departmentId",
+							"value": "${CallingPlan.DepartmentID}"
+						},
+						{
+							"code": "locationId",
+							"value": "${CallingPlan.LocationID}"
+						},
+						{
+							"code": "callingPlanId",
+							"value": "${CallingPlan.CallingPlanID}"
+						},
+						{
+							"code": "callingPlanName",
+							"value": "${CallingPlan.CallingPlanName}"
+						},
+						<#if CallingPlan.Incoming.IntraLocation?has_content && CallingPlan.Incoming.IntraLocation?trim !=''>
+						{
+							"code": "iIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.IntraLocation}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Incoming.InterLocation?has_content && CallingPlan.Incoming.InterLocation?trim !=''>
+						{
+							"code": "iInterLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.InterLocation}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Incoming.CollectCalls?has_content && CallingPlan.Incoming.CollectCalls?trim !=''>
+						{
+							"code": "iCollectCalls",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Incoming.CollectCalls}"]}"
+						},	
+						</#if>
+						<#if CallingPlan.Outgoing.IntraLocation?has_content && CallingPlan.Outgoing.IntraLocation?trim !=''>
+						{
+							"code": "oIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.IntraLocation}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.Local?has_content && CallingPlan.Outgoing.Local?trim !=''>
+						{
+							"code": "oLocal",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Local}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.TollFree?has_content && CallingPlan.Outgoing.TollFree?trim !=''>
+						{
+							"code": "oTollFree",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.TollFree}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.Toll?has_content && CallingPlan.Outgoing.Toll?trim !=''>
+						{
+							"code": "oToll",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Toll}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.International?has_content && CallingPlan.Outgoing.International?trim !=''>
+						{
+							"code": "oInternational",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.International}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.Casual?has_content && CallingPlan.Outgoing.Casual?trim !=''>
+						{
+							"code": "oCasual",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Casual}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.OperatorAssisted?has_content && CallingPlan.Outgoing.OperatorAssisted?trim !=''>
+						{
+							"code": "oOperatorAssisted",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.OperatorAssisted}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ChargeableDirectoryAssist?has_content && CallingPlan.Outgoing.ChargeableDirectoryAssist?trim !=''>
+						{
+							"code": "oChargedDirAssist",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ChargeableDirectoryAssist}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.SpecialServices1?has_content && CallingPlan.Outgoing.SpecialServices1?trim !=''>
+						{
+							"code": "oSplServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.SpecialServices1}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.SpecialServices2?has_content && CallingPlan.Outgoing.SpecialServices2?trim !=''>
+						{
+							"code": "oSplServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.SpecialServices2}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.PremiumServices1?has_content && CallingPlan.Outgoing.PremiumServices1?trim !=''>
+						{
+							"code": "oPrmServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.PremiumServices1}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.PremiumServices2?has_content && CallingPlan.Outgoing.PremiumServices2?trim !=''>
+						{
+							"code": "oPrmServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.PremiumServices2}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.URLDialing?has_content && CallingPlan.Outgoing.URLDialing?trim !=''>
+						{
+							"code": "oUrlDialing",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.URLDialing}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.Unknown?has_content && CallingPlan.Outgoing.Unknown?trim !=''>
+						{
+							"code": "oUnknown",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.Unknown}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.IntraLocation?has_content && CallingPlan.Outgoing.ForwardingTransferring.IntraLocation?trim !=''>
+						{
+							"code": "fIntraLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.IntraLocation}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.Local?has_content && CallingPlan.Outgoing.ForwardingTransferring.Local?trim !=''>
+						{
+							"code": "fLocal",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Local}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.TollFree?has_content && CallingPlan.Outgoing.ForwardingTransferring.TollFree?trim !=''>
+						{
+							"code": "fTollFree",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.TollFree}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.Toll?has_content && CallingPlan.Outgoing.ForwardingTransferring.Toll?trim !=''>
+						{
+							"code": "fToll",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Toll}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.International?has_content && CallingPlan.Outgoing.ForwardingTransferring.International?trim !=''>
+						{
+							"code": "fInternational",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.International}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.Casual?has_content && CallingPlan.Outgoing.ForwardingTransferring.Casual?trim !=''>
+						{
+							"code": "fCasual",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Casual}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.OperatorAssisted?has_content && CallingPlan.Outgoing.ForwardingTransferring.OperatorAssisted?trim !=''>
+						{
+							"code": "fOperatorAssisted",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.OperatorAssisted}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.ChargeableDirectoryAssist?has_content && CallingPlan.Outgoing.ForwardingTransferring.ChargeableDirectoryAssist?trim !=''>
+						{
+							"code": "fChargedDirAssist",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.ChargeableDirectoryAssist}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.SpecialServices1?has_content && CallingPlan.Outgoing.ForwardingTransferring.SpecialServices1?trim !=''>
+						{
+							"code": "fSplServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.SpecialServices1}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.SpecialServices2?has_content && CallingPlan.Outgoing.ForwardingTransferring.SpecialServices2?trim !=''>
+						{
+							"code": "fSplServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.SpecialServices2}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.PremiumServices1?has_content && CallingPlan.Outgoing.ForwardingTransferring.PremiumServices1?trim !=''>
+						{
+							"code": "fPrmServices1",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.PremiumServices1}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.PremiumServices2?has_content && CallingPlan.Outgoing.ForwardingTransferring.PremiumServices2?trim !=''>
+						{
+							"code": "fPrmServices2",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.PremiumServices2}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.URL?has_content && CallingPlan.Outgoing.ForwardingTransferring.URL?trim !=''>
+						{
+							"code": "fUrlDialing",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.URL}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.ForwardingTransferring.Unknown?has_content && CallingPlan.Outgoing.ForwardingTransferring.Unknown?trim !=''>
+						{
+							"code": "fUnknown",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.ForwardingTransferring.Unknown}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Outgoing.BeingForwardedTransferred.InterLocation?has_content && CallingPlan.Outgoing.BeingForwardedTransferred.InterLocation?trim !=''>
+						{
+							"code": "bInterLocation",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Outgoing.BeingForwardedTransferred.InterLocation}"]}"
+						},
+						</#if>
+						<#if CallingPlan.Active?has_content && CallingPlan.Active?trim !=''>
+						{
+							"code": "active",
+							"value": "${callingPlanCallTypeMap["${CallingPlan.Active}"]}"							         
+						},
+						</#if>
+						<#if CallingPlan.TransferNumber.TN1?has_content && CallingPlan.TransferNumber.TN1?trim !=''>
+						{
+							"code": "tn1",
+							"value": "${CallingPlan.TransferNumber.TN1}"
+						},
+						</#if>
+						<#if CallingPlan.TransferNumber.TN2?has_content && CallingPlan.TransferNumber.TN2?trim !=''>
+						{
+							"code": "tn2",
+							"value": "${CallingPlan.TransferNumber.TN2}"
+						},
+						</#if>
+						<#if CallingPlan.TransferNumber.TN3?has_content && CallingPlan.TransferNumber.TN3?trim !=''>
+						{
+							"code": "tn3",
+							"value": "${CallingPlan.TransferNumber.TN3}"
+						},
+						</#if>
+						${getDigitStrings(CallingPlan)}
+					]
+				}
+				<#if CallingPlan?index lt (size -1)>
+				,
+				</#if>
+			</#list>
+			]}
+		}
+	  }
+   }
+}
+
+<#function getDigitStrings CallingPlan >
+	<#local uniqueDigitStrings = []>
+	<#assign digitStrings = []/>
+		<#list CallingPlan as CP>
+			<#list CP.Incoming.DigitString as IDS>
+				<#assign incomingDigitStrings = IDS.value>
+				<#assign incomingDigitStringAction = IDS.action>
+				<#if incomingDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(incomingDigitStrings)>
+						<#local uniqueDigitStrings += [incomingDigitStrings]>
+					</#if>
+					<#if incomingDigitStringAction?has_content>
+						<#assign incomingObject = "{\"code\":\"idigitString${incomingDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${incomingDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [incomingObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.DigitString as ODS>
+				<#assign outgoingDigitStrings = ODS.value>
+				<#assign outgoingDigitStringAction = ODS.action>
+				<#if outgoingDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(outgoingDigitStrings)>
+						<#local uniqueDigitStrings += [outgoingDigitStrings]>
+					</#if>
+					<#if outgoingDigitStringAction?has_content>
+						<#assign outgoingObject = "{\"code\":\"odigitString${outgoingDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${outgoingDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [outgoingObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.ForwardingTransferring.DigitString as FTDS>
+				<#assign fwdDigitStrings = FTDS.value>
+				<#assign fwdDigitStringAction = FTDS.action>
+				<#if fwdDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(fwdDigitStrings)>
+						<#local uniqueDigitStrings += [fwdDigitStrings]>
+					</#if>
+					<#if fwdDigitStringAction?has_content>
+						<#assign fwdObject = "{\"code\":\"fdigitString${fwdDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${fwdDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [fwdObject]>
+					</#if>
+				</#if>
+			</#list>
+			<#list CP.Outgoing.BeingForwardedTransferred.DigitString as BFDS>
+				<#assign beingFwdDigitStrings = BFDS.value>
+				<#assign beingFwdDigitStringAction = BFDS.action>
+				<#if beingFwdDigitStrings?has_content>
+					<#if !uniqueDigitStrings?seq_contains(beingFwdDigitStrings)>
+						<#local uniqueDigitStrings += [beingFwdDigitStrings]>
+					</#if>
+					<#if beingFwdDigitStringAction?has_content>
+						<#assign beingFwdObject = "{\"code\":\"bdigitString${beingFwdDigitStrings}\",\"value\":\"${callingPlanCallTypeMap[\"${beingFwdDigitStringAction}\"]}\"}">
+						<#assign digitStrings += [beingFwdObject]>
+					</#if>
+				</#if>
+			</#list>	
+		</#list>
+		<#assign ds = "{\"code\":\"digitString\",\"value\":\"${uniqueDigitStrings?join(\",\")}\"}">
+		<#assign digitStrings += [ds]>
+	<#return digitStrings?join(",")>
+</#function>
+=============================================================================
+<#ftl ns_prefixes={
 "soapenv":"http://schemas.xmlsoap.org/soap/envelope/",
 "vzv":"http://vzvoip.verizon.com"}>
 {
