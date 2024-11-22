@@ -1,0 +1,413 @@
+public GetETTnFeatureDetailsResponse getETTnFeatureDetails(GetETTnFeatureDetails parameters) throws java.rmi.RemoteException
+ {
+	   SbcItsDao impl = new SbcItsDao();
+	   GetETTnFeatureDetailsResponse response = new GetETTnFeatureDetailsResponse();
+	   try
+	   {
+	      response = impl.getETTnFeatureDetails(parameters);
+	   }
+	   catch(Exception e)
+	   {
+	      e.printStackTrace();
+	   }
+	  return response;
+ }
+------------------------------------------------------
+public GetETTnFeatureDetailsResponse getETTnFeatureDetails(GetETTnFeatureDetails parameters) throws Exception
+  {
+	     ITSLogger.info("Inside getETTnFeatureDetails API ***********");   
+	     GetETTnFeatureDetailsResponse response = new GetETTnFeatureDetailsResponse();
+	     HeaderType headerType = new HeaderType();
+	     StatusType statusType = new StatusType();
+	     ITSValidator val = new ITSValidator();
+	     Connection conn = null;
+	     try
+	     {
+	        conn = DataBaseMgr.getConnection();
+	        if(conn == null)
+	           throw new QueryException(ErrorCode.SYSTEM_UNAVAILABLE,"Connection Not able to create from Database");
+	        
+	 		String transID = parameters.getRequestHeader().getTransactionID();
+			Calendar transDate = parameters.getRequestHeader().getTransactionDate();
+			String origSys = parameters.getRequestHeader().getOriginatingSystem().getValue().toString();
+			ITSLogger.info("TransID : " + transID +  " origSys : " + origSys);
+			response.setRequestHeader(parameters.getRequestHeader());
+	        statusType.setErrorCode(Integer.valueOf(ErrorCode.SUCCESS.errorCode));
+		 	statusType.setErrorText(ErrorCode.SUCCESS.errorDesc);
+			response.setStatus(statusType);
+	        int entTrTN = (parameters.getEnterpriseTrunkTn());
+		    ITSLogger.info("Enterprise Trunk TN : " + entTrTN);
+		    if(entTrTN == 0 || "".equals(entTrTN))
+		       throw new QueryException(ErrorCode.ENTERPRISE_TRUNKTN_ERROR,"valid Enterprise Trunk TN is Required");
+		    
+		    ArrayList<ETTnFeatureDetailsValueType> etnfdvType = new ArrayList<ETTnFeatureDetailsValueType>();
+	        if(entTrTN != 0 || entTrTN > 0)
+	        {
+	        	ITSLogger.info("TrunkGroup ID is not null and not having space: ");
+	        	etnfdvType = getETTnFeatureDetailsFromDB(conn,entTrTN);	        	
+	        }
+	        ITSLogger.info("size of ebdvType is : "+etnfdvType.size());
+	        ETTnFeatureDetailsValueType[] etnfdvTypeArray = new ETTnFeatureDetailsValueType[etnfdvType.size()];
+		    for(int data=0;data<etnfdvType.size();data++)
+	        {
+		    	etnfdvTypeArray[data] = etnfdvType.get(data);
+		    }
+		    response.setETTnFeature(etnfdvTypeArray);
+		    ITSLogger.info("###### After Successful execution of getETTnFeatureDetails #######");
+	     }
+	     catch (QueryException e)
+	     {
+	        e.printStackTrace();
+			ITSLogger.info("###### Inside Catch of getETTnFeatureDetails() ####### ");
+			statusType.setErrorCode(Integer.valueOf(e.errorCode.getErrorCode()));
+			statusType.setErrorText(e.errorCode.getErrorDesc());
+			response.setStatus(statusType);
+	     } 
+	     catch(Exception e)
+	     {
+			e.printStackTrace();
+	        statusType.setErrorCode(Integer.valueOf(ErrorCode.APP_ERROR.errorCode));
+		 	statusType.setErrorText(ErrorCode.APP_ERROR.errorDesc);
+			ITSLogger.info("Exception got in getETTnFeatureDetails() #######  ");
+	     }
+	     finally
+	     {
+	        try
+	        {
+	            ITSutil.closeConn(conn);
+	        }
+	        catch (Exception ex)
+	        {
+	            ex.printStackTrace();
+	        }
+	     } 
+	   return response;
+	  }
+--------------------------------------------------------------------
+public ArrayList<ETTnFeatureDetailsValueType> getETTnFeatureDetailsFromDB(Connection conn,int entTrTN) 
+     throws QueryException
+     {
+		ITSLogger.info("inside getETTnFeatureDetailsFromDB ");
+		ArrayList<ETTnFeatureDetailsValueType> etTNFetDetailsArray = new ArrayList<ETTnFeatureDetailsValueType>();
+		List<String> billFeatList = null;
+		List<String> comnFeatList = null;
+		ETTnFeatureDetailsValueType edt = new ETTnFeatureDetailsValueType();
+		try {
+
+			Location loc = new Location(conn);
+			TsoEtTnFeatures tsoET = new TsoEtTnFeatures(conn);
+			billFeatList = tsoET.getETTnLineFeaturesByETTnId(entTrTN);
+			String[] billTNfeat = billFeatList.toArray(new String[billFeatList.size()]);
+			if (billTNfeat != null && billTNfeat.length > 0) 
+			{
+				OptionalBillableFeaturesList[] optbillFeat = new OptionalBillableFeaturesList[billTNfeat.length];
+				for (int j = 0; j < billTNfeat.length; j++) 
+				{
+					optbillFeat[j] = OptionalBillableFeaturesList.fromString(billTNfeat[j]);
+					ITSLogger.info("Billable ETTN features are "+optbillFeat[j]);
+				}
+				edt.setOptionalBillableFeatures(optbillFeat);
+			}
+			comnFeatList = loc.getEtTnFeaturesByEtTn(entTrTN);
+			String[] commTNfeat = comnFeatList.toArray(new String[comnFeatList.size()]);
+			if (commTNfeat != null && commTNfeat.length > 0) 
+			{
+				ETTnCommonFeaturesList[] commFeatList = new ETTnCommonFeaturesList[commTNfeat.length];
+				for (int j = 0; j < commTNfeat.length; j++)
+				{
+					commFeatList[j] = ETTnCommonFeaturesList.fromString(commTNfeat[j]);
+					ITSLogger.info("Common ETTN features are "+commFeatList[j]);
+				}
+				edt.setETTnCommonFeatures(commFeatList);
+			}
+			etTNFetDetailsArray.add(edt);
+
+		} catch (Exception e) {
+			ITSLogger.info(" Caught Exception in getETTnFeatureDetailsFromDB Block ");
+			e.printStackTrace();
+		} finally {
+			try {
+				ITSutil.closeConn(conn);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+		return etTNFetDetailsArray;
+	}
+------------------------------------------------------------------
+public List<String>  getETTnLineFeaturesByETTnId (long etTnId) throws Exception {
+		 LogUtil.info("In getETTnLineFeaturesByETTnId");
+
+		 List<String>  etTnFeaturesList = new ArrayList<String>();
+		 StringBuffer sql = new StringBuffer();
+		 PreparedStatement pStmt = null;
+		 ResultSet rs = null;
+		 try{
+			 sql.append("select feature_id from tbl_tso_et_tn_features where et_tn_id = ?");
+			 LogUtil.info(" Sql  " + sql.toString() );
+
+			 pStmt = dbCon.prepareStatement(sql.toString());
+			 pStmt.setInt(1, (int)etTnId);
+			 if (pStmt != null){
+				 rs = pStmt.executeQuery();
+				 while ( rs.next()){
+					 long featureId = rs.getLong(1);
+					 //get the feature name
+					 TblVzbFeaturesQuery vzbFeatsQry = new TblVzbFeaturesQuery();
+					 vzbFeatsQry.whereFeatureIdEQ((int)featureId);
+					 vzbFeatsQry.query(dbCon);
+					 if (vzbFeatsQry.size() > 0) {
+						 etTnFeaturesList.add(vzbFeatsQry.getDbBean(0).getName());
+					 }
+				 }
+			 }
+			 LogUtil.info(" etTnFeaturesList :: "+etTnFeaturesList.size());
+		 }catch (SQLException e) {
+			 e.printStackTrace();
+			 LogUtil.info("DB_FAILURE in getETTnLineFeaturesByETTnId");
+			 //return regionId;
+			 throw e;
+		 }catch (Exception e) {
+			 e.printStackTrace();
+			 throw e;
+		 }finally{
+			 if (pStmt != null){
+				 pStmt.close();
+			 }
+			 if ( rs != null ){
+				 rs.close();
+			 }
+		 }
+
+		 return etTnFeaturesList;
+	 }
+-------------------------------------------------------------------
+public List<String> getEtTnFeaturesByEtTn(long etTnId) {
+		List<String> featPackageList = new ArrayList<String>();
+		try {
+			if (getEtTnFeaturesByIdOrTn(etTnId + "", false, null)) {
+				if (this.featurePkgList != null
+						&& this.featurePkgList.size() > 0) {
+					FeaturePackageBean featPkgBean = (FeaturePackageBean) featurePkgList
+							.get(0);
+					for (int i = 0; i < featPkgBean.getFeatureList().size(); i++) {
+						FeaturesBean fb = (FeaturesBean) featPkgBean
+								.getFeatureList().get(i);
+						featPackageList.add(fb.getFeaturesDbBean().getName());
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			setStatus(InvErrorCode.DB_EXCEPTION);
+			System.out
+					.println("getEtTnFeaturesByEtTn :: DB FAILURE in Location");
+		}
+		return featPackageList;
+	}
+---------------------------------------------------------------------
+public boolean getEtTnFeaturesByIdOrTn(String id, boolean idIsTn,
+			String featureType) {
+
+		TblTsoEtTnDbBean etTn;
+		try {
+			if (id != null && !id.isEmpty()) {
+				TblTsoEtTnQuery query = new TblTsoEtTnQuery();
+				if (idIsTn) {
+					query.whereTnPoolIdEQ(getTnPoolIdByTn(id));
+				} else {
+					query.whereEtTnIdEQ(Long.parseLong(id));
+				}
+				query.query(dbCon);
+				if (query.size() > 0) {
+					etTn = query.getDbBean(0);
+				} else {
+					setStatus(InvErrorCode.INVALID_INPUT);
+					System.out
+							.println("getEtTnFeaturesByIdOrTn :: No ET TN found for this ID/TN: "
+									+ id);
+					return false;
+				}
+			} else {
+				setStatus(InvErrorCode.INVALID_INPUT);
+				System.out
+						.println("getEtTnFeaturesByIdOrTn :: Id cannot be empty");
+				return false;
+			}
+
+			String entId;
+			TblTsoEnterpriseTrunkQuery etQuery = new TblTsoEnterpriseTrunkQuery();
+			etQuery.whereEnterpriseTrunkIdEQ(etTn.getEnterpriseTrunkId());
+			etQuery.query(dbCon);
+			if (etQuery.size() > 0) {
+				entId = etQuery.getDbBean(0).getEnterpriseId();
+			} else {
+				setStatus(InvErrorCode.INVALID_INPUT);
+				System.out
+						.println("getEtTnFeaturesByIdOrTn :: Enterprise Id wasn't found");
+				return false;
+			}
+
+			String locId;
+			TblPublicTnPoolQuery poolQuery = new TblPublicTnPoolQuery();
+			poolQuery.whereTnPoolIdEQ((int) etTn.getTnPoolId());
+			poolQuery.query(dbCon);
+			if (poolQuery.size() > 0) {
+				locId = poolQuery.getDbBean(0).getLocationId();
+			} else {
+				setStatus(InvErrorCode.INVALID_INPUT);
+				System.out
+						.println("getEtTnFeaturesByIdOrTn :: Location Id wasn't found");
+				return false;
+			}
+
+			long pkgId;
+			TblLocPackageQuery locPkgQuery = new TblLocPackageQuery();
+			locPkgQuery.whereLocationIdEQ(locId);
+			locPkgQuery.query(dbCon);
+			if (locPkgQuery.size() > 0) {
+				pkgId = locPkgQuery.getDbBean(0).getPackageId();
+			} else {
+				setStatus(InvErrorCode.INVALID_INPUT);
+				System.out
+						.println("getEtTnFeaturesByIdOrTn :: Package Id wasn't found");
+				return false;
+			}
+
+			LogUtil.info("getEtTnFeaturesByIdOrTn :: locationId = "
+					+ locId);
+			LogUtil.info("getEtTnFeaturesByIdOrTn :: enterpriseId = "
+					+ entId);
+			LogUtil.info("getEtTnFeaturesByIdOrTn :: featureType = "
+					+ featureType);
+			LogUtil.info("getEtTnFeaturesByIdOrTn :: packageId = "
+					+ pkgId);
+
+			List<String> entAuthFeatureIdList = getEntAuthFeatureIdList(entId,
+					featureType);
+			if (entAuthFeatureIdList == null || entAuthFeatureIdList.size() < 1) {
+				setStatus(InvErrorCode.NOTFOUND_ENT_AUTH_FEATURES_FOR_ENTERPRISE_ID);
+				System.out
+						.println("FAILURE in getEtTnFeaturesByIdOrTn() - Enterprise auth feature list is null or empty List");
+				return false;
+			}
+
+			List<String> disabledFeatureIdList = getEtTnDisabledFeatureIdList(etTn
+					.getEtTnId());
+
+			TblPackageQuery pkgQry = new TblPackageQuery();
+			pkgQry.wherePackageIdEQ(pkgId);
+			pkgQry.query(dbCon);
+
+			boolean foundAtLeastOneFeature = false;
+			ArrayList<FeaturesBean> featList = new ArrayList<FeaturesBean>();
+			if (pkgQry.size() == 1) {
+				TblPkgFeaturesQuery pkgFeatQry = new TblPkgFeaturesQuery();
+				pkgFeatQry.wherePackageIdEQ(pkgId);
+				pkgFeatQry.whereIsSelectedEQ("Y");
+				pkgFeatQry.query(dbCon);
+
+				if (pkgFeatQry.size() > 0) {
+					// for each result featureid, query details from
+					// TBL_VZB_FEATURES
+					ArrayList featureList = pkgFeatQry.getResultArrayList();
+					for (int j = 0; j < pkgFeatQry.size(); j++) {
+						Object oPkgFeatBean = featureList.get(j);
+						if (oPkgFeatBean != null) {
+							TblPkgFeaturesDbBean pkgFeatBean = (TblPkgFeaturesDbBean) oPkgFeatBean;
+							long featId = Long.parseLong(pkgFeatBean
+									.getFeatureId());
+							// check if the feature id is in the list of Ent
+							// auth features
+							if (entAuthFeatureIdList.contains("" + featId)) {
+								// ignore if its part of disabled list
+								if (disabledFeatureIdList == null
+										|| !disabledFeatureIdList.contains(""
+												+ featId)) {
+									// for the featureid, get the details from
+									// TBL_VZB_FEATURES and collect in a list
+									TblVzbFeaturesQuery vzbFeatQry = new TblVzbFeaturesQuery();
+									vzbFeatQry.whereFeatureIdEQ((int) featId);
+									// optional search for featureType
+									if (featureType != null
+											&& featureType.trim().length() > 0) {
+										vzbFeatQry
+												.whereFeatureTypeEQ(featureType);
+									}
+									vzbFeatQry.query(dbCon);
+									if (vzbFeatQry.size() > 0) {
+										foundAtLeastOneFeature = true;
+										DBTblVzbFeatures vzbFeatBean = new DBTblVzbFeatures();
+										vzbFeatBean.copyFromBean(vzbFeatQry
+												.getDbBean(0));
+										if (vzbFeatBean != null) {
+											FeaturesBean featBean = new FeaturesBean();
+											featBean.setFeaturesDbBean(vzbFeatBean);
+											featBean.setIsSelected((pkgFeatBean
+													.getIsSelected())
+													.equals("Y"));
+											featList.add(featBean);
+										}
+									}
+								} else {
+									System.out
+											.println("        FeatureId = "
+													+ featId
+													+ " is in the disable feature list, hence not included in the assign feature list");
+								}
+							} else {
+								System.out
+										.println("        FeatureId = "
+												+ featId
+												+ " is not authorized for the Ent, hence not included in the assign feature list");
+							}
+						}
+					}
+				} else {
+					setStatus(InvErrorCode.NO_PKG_FEATURES_FOR_LOCATION);
+					System.out
+							.println("FAILURE :: Package features not found for the given location id and package name");
+					return false;
+				}
+			} else {
+				setStatus(InvErrorCode.NO_PKG_ID_FOR_LOCATION_ID);
+				System.out
+						.println("FAILURE :: Package id not found for the given location id and package name");
+				return false;
+			}
+
+			if (!foundAtLeastOneFeature) {
+				setStatus(InvErrorCode.NO_FEATURES_FOR_LOCATION_ID_PKG_NAME);
+				System.out
+						.println("getEtTnFeaturesByIdOrTn :: No features where found for the given location id and package name");
+				return false;
+			}
+
+			// set the results for output
+			FeaturePackageBean resultFeatPkgBean = new FeaturePackageBean();
+			ArrayList<FeaturePackageBean> featPkgList = new ArrayList<FeaturePackageBean>();
+
+			resultFeatPkgBean.setFeatureList(featList);
+			featPkgList.add(resultFeatPkgBean);
+
+			// fulfill location object
+			this.enterpriseId = entId;
+			this.locationId = locId;
+			this.featurePkgList = featPkgList;
+
+			setStatus(InvErrorCode.SUCCESS);
+
+			System.out
+					.println("Successfully retrieved getFeatureListByFeaturePackageId for FeaturePackage from the DB");
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			setStatus(InvErrorCode.DB_EXCEPTION);
+			System.out
+					.println("getEtTnFeaturesByIdOrTn :: DB FAILURE in Location");
+			return false;
+		}
+
+		return true;
+	}
+---------------------------------------------------
