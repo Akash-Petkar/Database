@@ -1,3 +1,26 @@
+WITH filtered_inventory AS (
+    SELECT
+        t.customer_id,
+        jsonb_array_elements(tn_attributes->'attributeValue') AS tnAttributes,
+        jsonb_array_elements(entity_features->'entityFeature') AS entityFeatures
+    FROM
+        tninv.t_tn_inventory t
+    WHERE
+        EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(t.tn_attributes->'attributeValue') attr
+            WHERE attr->>'specName' = 'ET_TN_ID'
+              AND attr->>'specValue' = '347479'
+        )
+)
+SELECT
+    fi.customer_id AS "Customer_id",
+    fi.entityFeatures->>'featureName' AS "FeatureName",
+    fi.entityFeatures->>'featureStatus' AS "Status"
+FROM
+    filtered_inventory fi;
+
+=================================================
 Nested Loop  (cost=1000.01..9685326.19 rows=304889200 width=70) (actual time=10193.326..10282.834 rows=5 loops=1)
   Buffers: shared hit=3399052
   ->  Gather  (cost=1000.00..2063096.18 rows=3048892 width=83) (actual time=10191.645..10281.148 rows=1 loops=1)
