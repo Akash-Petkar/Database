@@ -1,3 +1,28 @@
+select
+	*
+	from
+		(
+		select
+			data.customer_id as "Customer_id",
+			data.features as "FeatureName",
+			data.status as "Status"
+		from
+			(
+			select
+				customer_id as customer_id,
+		      	entityFeatures->>'featureName' as features,
+                entityFeatures->>'featureStatus' as status
+			from
+				tninv.t_tn_inventory,
+				jsonb_array_elements(tn_attributes->'attributeValue') tnAttributes,
+				jsonb_array_elements(entity_features -> 'entityFeature') entityFeatures
+			where
+			    tnAttributes->>'specName'='ET_TN_ID' 
+			    and tnAttributes->>'specValue'='347479'
+		) as data
+		group by
+			customer_id,features,status) as totaldata;
+==================================================
 public GetETTnFeatureDetailsResponse getETTnFeatureDetails(GetETTnFeatureDetails parameters) throws java.rmi.RemoteException
  {
 	   SbcItsDao impl = new SbcItsDao();
