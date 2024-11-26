@@ -1,3 +1,25 @@
+Nested Loop  (cost=1000.01..9685326.19 rows=304889200 width=70) (actual time=10193.326..10282.834 rows=5 loops=1)
+  Buffers: shared hit=3399052
+  ->  Gather  (cost=1000.00..2063096.18 rows=3048892 width=83) (actual time=10191.645..10281.148 rows=1 loops=1)
+        Workers Planned: 6
+        Workers Launched: 6
+        Buffers: shared hit=3399052
+        ->  Nested Loop  (cost=0.01..1757206.98 rows=508149 width=83) (actual time=9070.476..10172.154 rows=0 loops=7)
+              Buffers: shared hit=3399052
+              ->  Parallel Seq Scan on t_tn_inventory t  (cost=0.00..735827.49 rows=508149 width=798) (actual time=0.020..333.759 rows=433324 loops=7)
+                    Buffers: shared hit=730746
+              ->  Function Scan on jsonb_array_elements tnattributes  (cost=0.01..2.00 rows=1 width=0) (actual time=0.022..0.022 rows=0 loops=3033269)
+                    Filter: (((value ->> 'specName'::text) = 'ET_TN_ID'::text) AND ((value ->> 'specValue'::text) = '347479'::text))
+                    Rows Removed by Filter: 53
+                    Buffers: shared hit=2668306
+  ->  Function Scan on jsonb_array_elements entityfeatures  (cost=0.01..1.00 rows=100 width=32) (actual time=1.660..1.661 rows=5 loops=1)
+Planning Time: 0.291 ms
+JIT:
+  Functions: 38
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 8.755 ms, Inlining 387.221 ms, Optimization 497.415 ms, Emission 284.394 ms, Total 1177.786 ms
+Execution Time: 10284.824 ms
+========================================================
 SELECT 
     t.customer_id AS "Customer_id",
     entityFeatures->>'featureName' AS "FeatureName",
