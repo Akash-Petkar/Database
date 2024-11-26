@@ -1,3 +1,41 @@
+Group  (cost=3425010.03..3543518.88 rows=151600 width=70) (actual time=10313.980..10418.853 rows=5 loops=1)
+  Group Key: t.customer_id, ((entityfeatures.value ->> 'featureName'::text)), ((entityfeatures.value ->> 'featureStatus'::text))
+  Buffers: shared hit=3399092
+  ->  Gather Merge  (cost=3425010.03..3535938.88 rows=909600 width=70) (actual time=10313.936..10418.797 rows=5 loops=1)
+        Workers Planned: 6
+        Workers Launched: 6
+        Buffers: shared hit=3399092
+        ->  Sort  (cost=3424009.94..3424388.94 rows=151600 width=70) (actual time=10290.955..10290.958 rows=1 loops=7)
+              Sort Key: t.customer_id, ((entityfeatures.value ->> 'featureName'::text)), ((entityfeatures.value ->> 'featureStatus'::text))
+              Sort Method: quicksort  Memory: 25kB
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              Worker 1:  Sort Method: quicksort  Memory: 25kB
+              Worker 2:  Sort Method: quicksort  Memory: 25kB
+              Worker 3:  Sort Method: quicksort  Memory: 25kB
+              Worker 4:  Sort Method: quicksort  Memory: 25kB
+              Worker 5:  Sort Method: quicksort  Memory: 25kB
+              Buffers: shared hit=3399092
+              ->  Partial HashAggregate  (cost=3408690.82..3410964.82 rows=151600 width=70) (actual time=10290.549..10290.882 rows=1 loops=7)
+                    Group Key: t.customer_id, (entityfeatures.value ->> 'featureName'::text), (entityfeatures.value ->> 'featureStatus'::text)
+                    Buffers: shared hit=3399044
+                    ->  Nested Loop  (cost=0.01..3027579.32 rows=50814867 width=70) (actual time=9183.384..10288.286 rows=1 loops=7)
+                          Buffers: shared hit=3399044
+                          ->  Nested Loop  (cost=0.01..1757206.98 rows=508149 width=83) (actual time=9183.377..10288.277 rows=0 loops=7)
+                                Buffers: shared hit=3399044
+                                ->  Parallel Seq Scan on t_tn_inventory t  (cost=0.00..735827.49 rows=508149 width=798) (actual time=0.018..333.685 rows=433324 loops=7)
+                                      Buffers: shared hit=730746
+                                ->  Function Scan on jsonb_array_elements tnattributes  (cost=0.01..2.00 rows=1 width=0) (actual time=0.022..0.022 rows=0 loops=3033267)
+                                      Filter: (((value ->> 'specName'::text) = 'ET_TN_ID'::text) AND ((value ->> 'specValue'::text) = '347479'::text))
+                                      Rows Removed by Filter: 53
+                                      Buffers: shared hit=2668298
+                          ->  Function Scan on jsonb_array_elements entityfeatures  (cost=0.01..1.00 rows=100 width=32) (actual time=0.017..0.018 rows=5 loops=1)
+Planning Time: 0.532 ms
+JIT:
+  Functions: 93
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 15.538 ms, Inlining 325.162 ms, Optimization 801.773 ms, Emission 522.427 ms, Total 1664.901 ms
+Execution Time: 10423.997 ms
+======================================================
 SELECT 
     data.customer_id AS "Customer_id",
     data.features AS "FeatureName",
