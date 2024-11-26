@@ -1,3 +1,15 @@
+(SELECT 
+    entityFeatures->>'featureName' AS "FeatureName",
+    entityFeatures->>'featureStatus' AS "Status"
+FROM 
+    tninv.t_tn_inventory t
+CROSS JOIN LATERAL (
+    SELECT *
+    FROM jsonb_array_elements(t.tn_attributes->'attributeValue') tnAttributes,
+     jsonb_array_elements(t.entity_features->'entityFeature') entityFeatures
+    WHERE  
+      tn = '18225182101');
+=============================
 WITH FilteredAttributes AS (
     SELECT
         customer_id,
