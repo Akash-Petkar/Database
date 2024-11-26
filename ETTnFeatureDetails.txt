@@ -1,3 +1,243 @@
+{
+  "attributeValue": [
+    {
+      "specName": "EXTENTION_LENGTH",
+      "specValue": "4"
+    },
+	{
+      "specName": "ET_TN_ID",
+      "specValue": "347479"
+    },
+    {
+      "specName": "PRIVATE_NUMBER",
+      "specValue": "2101"
+    },
+    {
+      "specName": "WEB_LANGUAGE",
+      "specValue": "US_ENGLISH"
+    },
+	{
+      "specName": "NS_CLLI",
+      "specValue": "RIVISTBSN01"
+    }
+  ]
+}
+------------------------------
+{
+  "entityFeature": [
+    {
+      "createdBy": "ESAPIASAMIGR",
+      "featureId": 20,
+      "modifiedBy": "",
+      "featureName": "Call Waiting",
+      "featureType": "TN_FEATURE",
+      "featureAction": null,
+      "featureStatus": "ASSIGNED",
+      "featureFaCodes": null,
+      "featureReference": [
+        {
+          "specName": "IASA_ID",
+          "specValue": "119"
+        },
+        {
+          "specName": "ICP_ID",
+          "specValue": "1053"
+        }
+      ],
+      "featureAttributes": [
+        {
+          "specName": "E2EI_ALLOW_MOD",
+          "specValue": "EDITABLE"
+        }
+      ],
+      "featureLevelAttributes": [
+        {
+          "specName": "FEATURE_TYPE",
+          "specValue": "USER"
+        },
+        {
+          "specName": "FEATURE_LEVEL",
+          "specValue": "SUBSCRIBER"
+        }
+      ],
+      "authorizationAttributes": [
+        {
+          "specName": "IS_AUTHORIZED",
+          "specValue": "YES"
+        }
+      ]
+    },
+    {
+      "createdBy": "ESAPIASAMIGR",
+      "featureId": 21,
+      "modifiedBy": "",
+      "featureName": "Calling Line ID Delivery Blocking",
+      "featureType": "TN_FEATURE",
+      "featureAction": null,
+      "featureStatus": "ASSIGNED",
+      "featureFaCodes": null,
+      "featureReference": [
+        {
+          "specName": "IASA_ID",
+          "specValue": "120"
+        },
+        {
+          "specName": "ICP_ID",
+          "specValue": "1048"
+        }
+      ],
+      "featureAttributes": [
+        {
+          "specName": "E2EI_ALLOW_MOD",
+          "specValue": "EDITABLE"
+        }
+      ],
+      "featureLevelAttributes": [
+        {
+          "specName": "FEATURE_TYPE",
+          "specValue": "USER"
+        },
+        {
+          "specName": "FEATURE_LEVEL",
+          "specValue": "SUBSCRIBER"
+        }
+      ],
+      "authorizationAttributes": [
+        {
+          "specName": "IS_AUTHORIZED",
+          "specValue": "YES"
+        }
+      ]
+    },
+    {
+      "createdBy": "ESAPIASAMIGR",
+      "featureId": 22,
+      "modifiedBy": "",
+      "featureName": "Calling Name Retrieval",
+      "featureType": "TN_FEATURE",
+      "featureAction": null,
+      "featureStatus": "ASSIGNED",
+      "featureFaCodes": null,
+      "featureReference": [
+        {
+          "specName": "IASA_ID",
+          "specValue": "121"
+        },
+        {
+          "specName": "ICP_ID",
+          "specValue": "1190"
+        }
+      ],
+      "featureAttributes": [
+        {
+          "specName": "E2EI_ALLOW_MOD",
+          "specValue": "EDITABLE"
+        }
+      ],
+      "featureLevelAttributes": [
+        {
+          "specName": "FEATURE_TYPE",
+          "specValue": "USER"
+        },
+        {
+          "specName": "FEATURE_LEVEL",
+          "specValue": "SUBSCRIBER"
+        }
+      ],
+      "authorizationAttributes": [
+        {
+          "specName": "IS_AUTHORIZED",
+          "specValue": "YES"
+        }
+      ]
+    },
+    {
+      "createdBy": "ESAPIASAMIGR",
+      "featureId": 33,
+      "modifiedBy": "",
+      "featureName": "External Calling Line ID Delivery",
+      "featureType": "TN_FEATURE",
+      "featureAction": null,
+      "featureStatus": "ASSIGNED",
+      "featureFaCodes": null,
+      "featureReference": [
+        {
+          "specName": "IASA_ID",
+          "specValue": "132"
+        },
+        {
+          "specName": "ICP_ID",
+          "specValue": "1058"
+        }
+      ],
+      "featureAttributes": [
+        {
+          "specName": "E2EI_ALLOW_MOD",
+          "specValue": "EDITABLE"
+        }
+      ],
+      "featureLevelAttributes": [
+        {
+          "specName": "FEATURE_TYPE",
+          "specValue": "USER"
+        },
+        {
+          "specName": "FEATURE_LEVEL",
+          "specValue": "SUBSCRIBER"
+        }
+      ],
+      "authorizationAttributes": [
+        {
+          "specName": "IS_AUTHORIZED",
+          "specValue": "YES"
+        }
+      ]
+    },
+    {
+      "createdBy": "ESAPIASAMIGR",
+      "featureId": 39,
+      "modifiedBy": "",
+      "featureName": "Internal Calling Line ID Delivery",
+      "featureType": "TN_FEATURE",
+      "featureAction": null,
+      "featureStatus": "ASSIGNED",
+      "featureFaCodes": null,
+      "featureReference": [
+        {
+          "specName": "IASA_ID",
+          "specValue": "138"
+        },
+        {
+          "specName": "ICP_ID",
+          "specValue": "1063"
+        }
+      ],
+      "featureAttributes": [
+        {
+          "specName": "E2EI_ALLOW_MOD",
+          "specValue": "EDITABLE"
+        }
+      ],
+      "featureLevelAttributes": [
+        {
+          "specName": "FEATURE_TYPE",
+          "specValue": "USER"
+        },
+        {
+          "specName": "FEATURE_LEVEL",
+          "specValue": "SUBSCRIBER"
+        }
+      ],
+      "authorizationAttributes": [
+        {
+          "specName": "IS_AUTHORIZED",
+          "specValue": "YES"
+        }
+      ]
+    }
+  ]
+}
+=============================================================
 WITH filtered_inventory AS (
     SELECT 
         t.customer_id,
