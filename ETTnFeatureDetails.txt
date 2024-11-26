@@ -1,3 +1,24 @@
+WITH filtered_inventory AS (
+    SELECT 
+        t.customer_id,
+        t.entity_features,
+        tnAttributes.value AS matched_attribute
+    FROM 
+        tninv.t_tn_inventory t,
+        LATERAL jsonb_array_elements(t.tn_attributes->'attributeValue') tnAttributes
+    WHERE 
+        tnAttributes->>'specName' = 'ET_TN_ID' 
+        AND tnAttributes->>'specValue' = '347479'
+)
+SELECT 
+    fi.customer_id AS "Customer_id",
+    entityFeature->>'featureName' AS "FeatureName",
+    entityFeature->>'featureStatus' AS "Status"
+FROM 
+    filtered_inventory fi,
+    LATERAL jsonb_array_elements(fi.entity_features->'entityFeature') entityFeature;
+
+===========================================
 WITH filtered_row AS (
     SELECT
         t.customer_id,
