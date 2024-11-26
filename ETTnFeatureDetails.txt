@@ -1,3 +1,24 @@
+SELECT 
+    data.customer_id AS "Customer_id",
+    data.features AS "FeatureName",
+    data.status AS "Status"
+FROM (
+    SELECT 
+        t.customer_id,
+        entityFeatures->>'featureName' AS features,
+        entityFeatures->>'featureStatus' AS status
+    FROM 
+        tninv.t_tn_inventory t
+    CROSS JOIN LATERAL jsonb_array_elements(t.tn_attributes->'attributeValue') tnAttributes
+    CROSS JOIN LATERAL jsonb_array_elements(t.entity_features->'entityFeature') entityFeatures
+    WHERE 
+        tnAttributes->>'specName' = 'ET_TN_ID'
+        AND tnAttributes->>'specValue' = '347479'
+) data
+GROUP BY 
+    data.customer_id, data.features, data.status;
+
+===========================================================
 select
 	*
 	from
