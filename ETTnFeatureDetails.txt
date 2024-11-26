@@ -1,3 +1,19 @@
+SELECT 
+    t.customer_id AS "Customer_id",
+    entityFeatures->>'featureName' AS "FeatureName",
+    entityFeatures->>'featureStatus' AS "Status"
+FROM 
+    tninv.t_tn_inventory t
+CROSS JOIN LATERAL (
+    SELECT value
+    FROM jsonb_array_elements(t.tn_attributes->'attributeValue') tnAttributes
+    WHERE 
+        tnAttributes->>'specName' = 'ET_TN_ID'
+        AND tnAttributes->>'specValue' = '347479'
+) filtered_tnAttributes
+CROSS JOIN LATERAL jsonb_array_elements(t.entity_features->'entityFeature') entityFeatures;
+
+===============================================
 Group  (cost=3425010.03..3543518.88 rows=151600 width=70) (actual time=10313.980..10418.853 rows=5 loops=1)
   Group Key: t.customer_id, ((entityfeatures.value ->> 'featureName'::text)), ((entityfeatures.value ->> 'featureStatus'::text))
   Buffers: shared hit=3399092
