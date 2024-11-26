@@ -1,3 +1,27 @@
+select
+	*
+	from
+		(
+		select
+			data.customer_id as "Customer_id",
+			data.features as "FeatureName",
+			data.status as "Status"
+		from
+			(
+			select
+				customer_id as customer_id,
+		      	entityFeatures->>'featureName' as features,
+                entityFeatures->>'featureStatus' as status
+			from
+				tninv.t_tn_inventory t,
+				jsonb_array_elements(t.tn_attributes->'attributeValue') tnAttributes,
+				jsonb_array_elements(t.entity_features -> 'entityFeature') entityFeatures
+			where
+			tn = '18225182101'
+		) as data
+		group by
+			customer_id,features,status) as totaldata;
+============================================
 (SELECT 
     entityFeatures->>'featureName' AS "FeatureName",
     entityFeatures->>'featureStatus' AS "Status"
