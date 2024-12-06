@@ -1,3 +1,38 @@
+
+public void getIPSecTunnelStatus(Task task, ExternalInterfaceRequest request,
+				List<Task> taskList, ExternalInterfaceResponse externalInterfaceResponse) throws JsonProcessingException {
+			boolean validate=false;
+			log.info("Inside getETTnFeatureDetails, request::" + objectMapper.writeValueAsString(request));
+			List<Specification> payload = request.getPayload();
+			for(Specification specification:payload) {
+				String specCode = specification.getSpecCode();
+				String specValue = (String) specification.getSpecValue();
+				if("IPsecTunnelId".equals(specCode) && " ".equals(specValue)) {
+					validate = true;
+				}else if("IPsecTunnelId".equals(specCode) && specValue.isEmpty()){
+					validate = false;
+				}
+			}
+			Map<String, String> validationList = webServicesImplUtil.createValidationMap(request);
+			Status status=new Status();
+			
+			if(validate==true || (validationList.containsKey("IPsecTunnelId") 
+					&& validationList.get("IPsecTunnelId") != null 
+					&& validationList.get("IPsecTunnelId").matches(".*[^a-zA-Z0-9].*"))) {
+				status.setStatusCode(WebServicesErrorCodes.INVALID_IPSECTUNNELID_CHARACTER.errorCode);
+				status.setStatusDescription(WebServicesErrorCodes.INVALID_IPSECTUNNELID_CHARACTER.errorDesc);
+				externalInterfaceResponse.setRawBusinessResponse(status);
+			}else if(validate==false && validationList.get("IPsecTunnelId") == null) {
+				status.setStatusCode(WebServicesErrorCodes.MISSING_IPSECTUNNELID.errorCode);
+				status.setStatusDescription(WebServicesErrorCodes.MISSING_IPSECTUNNELID.errorDesc);
+				externalInterfaceResponse.setRawBusinessResponse(status);
+			}else {
+				restDbOperationServiceConnector.executeRestDbOperationApi(task, request, taskList, externalInterfaceResponse);
+			}
+
+			log.info("Exited getCustomerDetailsITS, response::" + objectMapper.writeValueAsString(externalInterfaceResponse));
+		}
+==========================================================
 SELECT 
     customer_id AS "Customer_id",
     entityFeatures->>'featureName' AS "FeatureName",
