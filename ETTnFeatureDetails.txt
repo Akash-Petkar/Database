@@ -1,5 +1,45 @@
 
 public void getIPSecTunnelStatus(Task task, ExternalInterfaceRequest request,
+                                 List<Task> taskList, ExternalInterfaceResponse externalInterfaceResponse)
+        throws JsonProcessingException {
+
+    log.info("Inside getIPSecTunnelStatus, request::{}", objectMapper.writeValueAsString(request));
+
+    List<Specification> payload = request.getPayload();
+
+    // Check for IPsecTunnelId validation
+    boolean isIPsecTunnelIdInvalid = payload.stream()
+            .anyMatch(specification -> "IPsecTunnelId".equals(specification.getSpecCode()) &&
+                    (specification.getSpecValue() == null || specification.getSpecValue().toString().trim().isEmpty()));
+
+    // Create validation map
+    Map<String, String> validationList = webServicesImplUtil.createValidationMap(request);
+
+    // Prepare response status
+    Status status = new Status();
+
+    String ipsecTunnelId = validationList.get("IPsecTunnelId");
+
+    if (isIPsecTunnelIdInvalid || (ipsecTunnelId != null && ipsecTunnelId.matches(".*[^a-zA-Z0-9].*"))) {
+        status.setStatusCode(WebServicesErrorCodes.INVALID_IPSECTUNNELID_CHARACTER.errorCode);
+        status.setStatusDescription(WebServicesErrorCodes.INVALID_IPSECTUNNELID_CHARACTER.errorDesc);
+        externalInterfaceResponse.setRawBusinessResponse(status);
+
+    } else if (!isIPsecTunnelIdInvalid && ipsecTunnelId == null) {
+        status.setStatusCode(WebServicesErrorCodes.MISSING_IPSECTUNNELID.errorCode);
+        status.setStatusDescription(WebServicesErrorCodes.MISSING_IPSECTUNNELID.errorDesc);
+        externalInterfaceResponse.setRawBusinessResponse(status);
+
+    } else {
+        // Proceed with REST DB operation if validation passes
+        restDbOperationServiceConnector.executeRestDbOperationApi(task, request, taskList, externalInterfaceResponse);
+    }
+
+    log.info("Exited getIPSecTunnelStatus, response::{}", objectMapper.writeValueAsString(externalInterfaceResponse));
+}
+
+=======================================================================================
+public void getIPSecTunnelStatus(Task task, ExternalInterfaceRequest request,
 				List<Task> taskList, ExternalInterfaceResponse externalInterfaceResponse) throws JsonProcessingException {
 			boolean validate=false;
 			log.info("Inside getETTnFeatureDetails, request::" + objectMapper.writeValueAsString(request));
