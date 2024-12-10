@@ -3,6 +3,93 @@
 <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzbvoip.verizon.com/SBCProvisioningQuery">
     <env:Body>
         <ns0:GetIPSecTunnelStatusResponse>
+            <!-- Handle Request Header -->
+            <#if data.header??>
+                <#assign specsList = data.header.specifications>
+                <RequestHeader>
+                    <#list specsList as spec>
+                        <#if spec.specCode?lower_case == 'transactionid' && spec.specValue??>
+                            <TransactionID>${spec.specValue}</TransactionID>
+                        </#if>
+                        <#if spec.specCode?lower_case == 'originatingsystem' && spec.specValue??>
+                            <OriginatingSystem>${spec.specValue}</OriginatingSystem>
+                        </#if>
+                        <#if spec.specCode?lower_case == 'transactiondate' && spec.specValue??>
+                            <TransactionDate>${spec.specValue}</TransactionDate>
+                        </#if>
+                    </#list>
+                </RequestHeader>
+            </#if>
+
+            <!-- Handle rawBusinessResponse -->
+            <#if data.rawBusinessResponse??>
+                <#assign rawBusinessResponse = data.rawBusinessResponse>
+                <#assign statusCode = rawBusinessResponse.statusCode?default('')>
+                <#assign statusDescription = rawBusinessResponse.statusDescription?default('')>
+                <#if statusCode == 'Error' && statusDescription == 'Error'>
+                    <Status>
+                        <ErrorCode>4</ErrorCode>
+                        <ErrorText>ESAP Internal error</ErrorText>
+                    </Status>
+                    <TunnelStatus xsi:nil="1"/>
+                <#elseif statusCode == 'Error1' && statusDescription == 'Error1'>
+                    <Status>
+                        <ErrorCode>102</ErrorCode>
+                        <ErrorText>Valid IPSEC Tunnel ID is Required</ErrorText>
+                    </Status>
+                    <TunnelStatus xsi:nil="1"/>
+                <#else>
+                    <Status>
+                        <ErrorCode>1</ErrorCode>
+                        <ErrorText>Unhandled error in rawBusinessResponse</ErrorText>
+                    </Status>
+                    <TunnelStatus xsi:nil="1"/>
+                </#if>
+            <#elseif data.rawResponse??>
+                <!-- Handle Success Response -->
+                <#assign rawResponse = JsonUtil.jsonToMap(data.rawResponse)>
+                <#assign dataList = rawResponse.dataList?default([])>
+                <#if dataList?size > 0>
+                    <Status>
+                        <ErrorCode>0</ErrorCode>
+                        <ErrorText>Request processed successfully in ESAP</ErrorText>
+                    </Status>
+                    <#assign tunnelStatus = ''>
+                    <#list dataList[0] as obj>
+                        <#if obj.columnName == 'TunnelStatus' && obj.columnValue??>
+                            <#assign tunnelStatus = obj.columnValue>
+                        </#if>
+                    </#list>
+                    <#if tunnelStatus??>
+                        <TunnelStatus>${tunnelStatus}</TunnelStatus>
+                    </#else>
+                        <TunnelStatus xsi:nil="1"/>
+                    </#if>
+                <#else>
+                    <Status>
+                        <ErrorCode>1</ErrorCode>
+                        <ErrorText>No Data Found</ErrorText>
+                    </Status>
+                    <TunnelStatus xsi:nil="1"/>
+                </#if>
+            <#else>
+                <!-- Fallback for unexpected cases -->
+                <Status>
+                    <ErrorCode>3</ErrorCode>
+                    <ErrorText>Unexpected Response Format</ErrorText>
+                </Status>
+                <TunnelStatus xsi:nil="1"/>
+            </#if>
+        </ns0:GetIPSecTunnelStatusResponse>
+    </env:Body>
+</env:Envelope>
+
+===================================================================================
+<#-- @ftlvariable name=JsonUtil type=com.freemarker.poc.JsonUtil -->
+<#assign data = JsonUtil.jsonToMap(input)>
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzbvoip.verizon.com/SBCProvisioningQuery">
+    <env:Body>
+        <ns0:GetIPSecTunnelStatusResponse>
             <!-- Handle header -->
             <#if data.header??>
                 <#assign specsList = data.header.specifications>
