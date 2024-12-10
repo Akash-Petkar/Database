@@ -1,4 +1,166 @@
+<#-- @ftlvariable name=JsonUtil type=com.freemarker.poc.JsonUtil -->
+	<#assign data = JsonUtil.jsonToMap(input)>
+    <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:enc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:ns0="http://vzbvoip.verizon.com/SBCProvisioningQuery">
+    <env:Body>
+    <ns0:GetIPSecTunnelStatusResponse>
+	<#if data.rawResponse??>
+	    <#assign specsList = data.header>
+			<#assign specs =specsList.specifications>
+			<#assign headList =specs>
+			<#list headList as headers>
+				<#if (headers.specCode = 'transactionID' || headers.specCode = 'TransactionID') && headers.specValue??>
+					<#assign TransactionID = headers.specValue>
+				</#if>
+				<#if (headers.specCode = 'originatingSystem' || headers.specCode = 'OriginatingSystem') && headers.specValue??>
+					<#assign OriginatingSystem = headers.specValue>
+				</#if>
+				<#if (headers.specCode = 'transactionDate' || headers.specCode = 'TransactionDate') && headers.specValue??>
+					<#assign TransactionDate = headers.specValue>
+				</#if>
+			</#list>
+			<RequestHeader>
+							 <#if TransactionID??>
+									 <TransactionID>${TransactionID}</TransactionID>
+							 </#if>
+							<#if OriginatingSystem??>
+									<OriginatingSystem>${OriginatingSystem}</OriginatingSystem>
+							</#if>
+							<#if TransactionDate??>
+									 <TransactionDate>${TransactionDate}</TransactionDate>
+							</#if>
+			 </RequestHeader>
+        <#if data.rawBusinessResponse??>
+		<#assign rawBusinessResponse = data.rawBusinessResponse>
+        <#assign responseList = rawBusinessResponse?keys>
+		<#list responseList as response>
+			<#if response = 'statusCode'>
+				<#assign statusCode = rawBusinessResponse[response]>
+			</#if>
+			<#if response = 'statusDescription'>
+				<#assign statusDescription = rawBusinessResponse[response]>
+			</#if>
+		</#list>
+            <#if statusCode = 'Error' && statusDescription ='Error'>
+			 <Status>
+              <ErrorCode>4</ErrorCode>
+              <ErrorText>ESAP Internal error</ErrorText>
+             </Status>
+             <TunnelStatus xsi:nil="1"/>
+			</#if>
+			<#if statusCode = 'Error1' && statusDescription ='Error1'>
+			  <Status>
+               <ErrorCode>102</ErrorCode>
+               <ErrorText>Valid IPSEC Tunnel ID is Required</ErrorText>
+              </Status>
+              <TunnelStatus xsi:nil="1"/>
+			</#if>
+	     </#if>
+				<#if (dataListSize > 0)>
+				   <Status>
+                         <ErrorCode>0</ErrorCode>
+                         <ErrorText>Request processed successfully in ESAP </ErrorText>
+                   </Status>		   
+					<#assign dataa = dataList[0]> 
+						<#list dataa as obj> 
+							<#if obj.columnName = 'TunnelStatus'>
+								<#assign TunnelStatus = obj.columnValue>
+							</#if>
+						</#list>
+								    <#if TunnelStatus??>
+										<TunnelStatus>${TunnelStatus}</TunnelStatus>
+									</#if>								
+				</#if>
+			</#list>	
+	</#if>
+	</ns0:GetIPSecTunnelStatusResponse>
+	</env:Body>
+	</env:Envelope>
+--------------------------------------------------------------
+{
+	"rawResponse": "[ {\n  \"tableName\" : null,\n  \"dbOperation\" : \"select\",\n  \"status\" : \"success\",\n  \"statusDesc\" : \"successfully perfrom: select Operation\",\n  \"numberOfRecords\" : 1,\n  \"sqlKey\" : \"getIPSecTunnelStatus\",\n  \"sourceService\" : \"ITS\",\n  \"dataList\" : [ [ {\n    \"columnName\" : \"TunnelStatus\",\n    \"columnValue\" : \"1\"\n  }, {\n    \"columnName\" : \"CustomerId\",\n    \"columnValue\" : \"10009152\"\n  }, {\n    \"columnName\" : \"CustomerName\",\n    \"columnValue\" : \"@NT98314076\"\n  } ] ]\n} ]",
+	"header": {
+		"apiname": "getIPSecTunnelStatus",
+		"originatingSystem": "ITS",
+		"specifications": [
+			{
+				"specCode": "TransactionID",
+				"specValue": "ITS_4001"
+			},
+			{
+				"specCode": "OriginatingSystem",
+				"specValue": "ITS"
+			},
+			{
+				"specCode": "TransactionDate",
+				"specValue": "2011-09-19T10:23:04.334Z"
+			}
+		]
+	},
+	"responsePayload": [],
+	"statusCode": "200",
+	"statusDescription": "Success",
+	"techicalFailureDetails": []
+}
 
+---------------------------------
+{
+	"header": {
+		"apiname": "getIPSecTunnelStatus",
+		"originatingSystem": "ITS",
+		"specifications": [
+			{
+				"specCode": "TransactionID",
+				"specValue": "ITS_4001"
+			},
+			{
+				"specCode": "OriginatingSystem",
+				"specValue": "ITS"
+			},
+			{
+				"specCode": "TransactionDate",
+				"specValue": "2011-09-19T10:23:04.334Z"
+			}
+		]
+	},
+	"responsePayload": [],
+	"statusCode": "200",
+	"statusDescription": "Success",
+	"techicalFailureDetails": [],
+	"rawBusinessResponse": {
+		"statusCode": "Error1",
+		"statusDescription": "Error1"
+	}
+}
+-----------------------------------------------------------------
+{
+	"header": {
+		"apiname": "getIPSecTunnelStatus",
+		"originatingSystem": "ITS",
+		"specifications": [
+			{
+				"specCode": "TransactionID",
+				"specValue": "ITS_4001"
+			},
+			{
+				"specCode": "OriginatingSystem",
+				"specValue": "ITS"
+			},
+			{
+				"specCode": "TransactionDate",
+				"specValue": "2011-09-19T10:23:04.334Z"
+			}
+		]
+	},
+	"responsePayload": [],
+	"statusCode": "200",
+	"statusDescription": "Success",
+	"techicalFailureDetails": [],
+	"rawBusinessResponse": {
+		"statusCode": "Error",
+		"statusDescription": "Error"
+	}
+}
+==================================================================
 public void getIPSecTunnelStatus(Task task, ExternalInterfaceRequest request,
                                  List<Task> taskList, ExternalInterfaceResponse externalInterfaceResponse)
         throws JsonProcessingException {
